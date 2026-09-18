@@ -1,0 +1,68 @@
+import { after, before, test } from 'node:test';
+import assert from 'node:assert/strict';
+import type { Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { createApp, type Publish } from './app.ts';
+import type { Intersection } from './contract.ts';
+import { PriorityEngine } from './priority.ts';
+
+const X: Intersection = { id: 'X', name: 'Test', lat: 0, lng: 0, axisA: 0 };
+const published: { topic: string; payload: object; retain: boolean }[] = [];
+const publish: Publish = (topic, payload, retain) => {
+  published.push({ topic, payload, retain });
+};
+const app = createApp({
+  engine: new PriorityEngine([X], { radiusM: 1000, passM: 50, passHysteresisM: 20, ttlS: 15, staleS: 15 }),
+  publish,
+  publicConfig: { topicPrefix: 'test', mqttWsUrl: 'wss://example.invalid/mqtt', radiusM: 1000, staleS: 15 },
+  intersections: [X],
+  dashboardDir: import.meta.dirname,
+});
+
+let server: Server;
+let base = '';
+before(async () => {
+  server = app.listen(0);
+  await new Promise((resolve) => server.once('listening', resolve));
+  base = `http://localhost:${(server.address() as AddressInfo).port}`;
+});
+after(() => server.close());
+
+const postGps = (body: string) =>
+  fetch(`${base}/api/gps`, { method: 'POST', headers: { 'content-type': 'application/json' }, body });
+
+test('POST /api/gps rejects an invalid payload with 400 and the bad fields', async () => {
+  const res = await postGps(JSON.stringify({ vehicleId: 'A', type: 'taxi', lat: 0, lng: 0 }));
+  assert.equal(res.status, 400);
+  assert.deepEqual(await res.json(), { error: 'invalid gps payload', fields: ['type'] });
+});
+
+test('POST /api/gps rejects malformed JSON with 400', async () => {
+  const res = await postGps('{bad');
+  assert.equal(res.status, 400);
+  assert.deepEqual(await res.json(), { error: 'invalid json' });
+});
+
+test('POST /api/gps publishes vehicle + retained PRIORITY and returns nextIntersection', async () => {
+  published.length = 0;
+  const lat = (northM: number) => northM / 111_195;
+  await postGps(JSON.stringify({ vehicleId: 'AMB-01', type: 'ambulance', lat: lat(-1100), lng: 0 }));
+  const res = await postGps(JSON.stringify({ vehicleId: 'AMB-01', type: 'ambulance', lat: lat(-990), lng: 0, speed: 60 }));
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { nextIntersection: { id: 'X', name: 'Test', distanceM: 990, mode: 'PRIORITY' } });
+  assert.deepEqual(
+    published.map((p) => [p.topic, p.retain]),
+    [
+      ['test/vehicle/AMB-01', false],
+      ['test/vehicle/AMB-01', false],
+      ['test/intersection/X/cmd', true],
+    ],
+  );
+  assert.equal((published[2].payload as { mode: string }).mode, 'PRIORITY');
+});
+
+test('GET /api/intersections and /api/config', async () => {
+  assert.deepEqual(await (await fetch(`${base}/api/intersections`)).json(), [X]);
+  const config = (await (await fetch(`${base}/api/config`)).json()) as { topicPrefix: string };
+  assert.equal(config.topicPrefix, 'test');
+});

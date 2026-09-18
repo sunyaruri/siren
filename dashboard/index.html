@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SIREN Command Center</title>
+    <link rel="icon" href="data:," />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="layout">
+      <div id="map" role="region" aria-label="Peta Jember"></div>
+      <aside class="panel">
+        <header class="panel__header">
+          <div>
+            <h1>SIREN</h1>
+            <p>Command Center · Jember</p>
+          </div>
+          <span id="mqtt-status" class="pill pill--offline" role="status">MQTT terputus</span>
+        </header>
+        <section>
+          <h2>Simpang</h2>
+          <ul id="intersections" class="list"></ul>
+        </section>
+        <section>
+          <h2>Kendaraan</h2>
+          <ul id="vehicles" class="list"></ul>
+        </section>
+        <section class="log">
+          <h2>Log Kejadian</h2>
+          <ol id="log" aria-live="polite"></ol>
+        </section>
+      </aside>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

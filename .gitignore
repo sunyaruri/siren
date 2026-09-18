@@ -1,0 +1,6 @@
+node_modules/
+.env
+.playwright-mcp/
+# plan/spec stay local
+docs/superpowers/
+document.md

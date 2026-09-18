@@ -1,0 +1,224 @@
+:root {
+  --bg: #0b0f19;
+  --surface: #121a2b;
+  --surface-2: #1a233a;
+  --text: #f3f4f6;
+  --muted: #9ca3af;
+  --border: #2a3448;
+  --normal: #64748b;
+  --priority: #22c55e;
+  --ambulance: #38bdf8;
+  --firetruck: #ef4444;
+  --offline: #ef4444;
+  --font-ui: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.4 var(--font-ui);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  height: 100vh;
+}
+#map {
+  height: 100%;
+  background: var(--bg);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  min-height: 0;
+  overflow: hidden;
+}
+.panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.panel__header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+.panel__header p {
+  color: var(--muted);
+  font-size: 14px;
+}
+h2 {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 12px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.card__title {
+  font: 600 18px var(--font-mono);
+}
+.card__sub {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 14px;
+}
+.empty {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font: 600 12px var(--font-mono);
+  background: var(--normal);
+  color: var(--bg);
+  white-space: nowrap;
+}
+.pill--priority,
+.pill--online {
+  background: var(--priority);
+}
+.pill--offline {
+  background: var(--offline);
+  color: var(--text);
+}
+.pill--ambulance {
+  background: var(--ambulance);
+}
+.pill--firetruck {
+  background: var(--firetruck);
+  color: var(--text);
+}
+
+.log {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+#log {
+  flex: 1;
+  min-height: 0;
+  list-style: none;
+  padding: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  font: 14px/1.4 var(--font-mono);
+}
+#log time {
+  color: var(--muted);
+  margin-right: 8px;
+}
+.log--priority {
+  color: var(--priority);
+}
+
+.signal-dot {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--normal);
+  border: 2px solid var(--bg);
+}
+.signal-dot--priority {
+  background: var(--priority);
+  box-shadow: 0 0 12px var(--priority);
+}
+
+.vehicle-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--bg);
+  border: 2px solid var(--text);
+}
+.vehicle-icon--ambulance {
+  background: var(--ambulance);
+  box-shadow: 0 0 14px var(--ambulance);
+}
+.vehicle-icon--firetruck {
+  background: var(--firetruck);
+  box-shadow: 0 0 14px var(--firetruck);
+}
+
+.zone--priority {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    fill-opacity: 0.3;
+    stroke-width: 4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zone--priority {
+    animation: none;
+  }
+}
+
+.leaflet-container {
+  font-family: var(--font-ui);
+}
+.map-tiles {
+  filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%)
+    saturate(40%);
+}
+.leaflet-control-attribution {
+  background: rgb(11 15 25 / 0.75) !important;
+  color: var(--muted) !important;
+}
+.leaflet-control-attribution a {
+  color: var(--text) !important;
+}
+
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 60vh auto;
+    height: auto;
+  }
+  .panel {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}
