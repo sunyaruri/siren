@@ -30,7 +30,9 @@ body {
   overscroll-behavior: none;
 }
 
-.view {
+/* An author rule setting `display` on the same element as [hidden] beats the browser's [hidden]{display:none}
+   UA rule, so the flex display must be scoped to :not([hidden]) or every view stays visible and stacked. */
+.view:not([hidden]) {
   display: flex;
   flex-direction: column;
   height: 100dvh;
