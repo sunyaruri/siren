@@ -21,13 +21,19 @@ function defaultBackendUrl() {
 
 document.getElementById("backend-url").value = defaultBackendUrl();
 
+let roleChosen = false; // a double-tap on a landing button would otherwise init the same Leaflet map twice
+
 document.getElementById("btn-driver").addEventListener("click", async () => {
+  if (roleChosen) return;
+  roleChosen = true;
   show("driver");
   const { initDriver } = await import("./driver.js");
   initDriver({ getJson });
 });
 
 document.getElementById("btn-citizen").addEventListener("click", async () => {
+  if (roleChosen) return;
+  roleChosen = true;
   show("citizen");
   const backendUrl = defaultBackendUrl();
   const config = await getJson(`${backendUrl}/api/config`);

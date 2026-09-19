@@ -11,6 +11,7 @@ const el = {
   vehicleType: document.getElementById("vehicle-type"),
   gpsToggle: document.getElementById("gps-toggle"),
   backendUrl: document.getElementById("backend-url"),
+  btnStart: document.getElementById("btn-start"),
   btnStop: document.getElementById("btn-stop"),
   hudMode: document.getElementById("hud-mode"),
   hudName: document.getElementById("hud-name"),
@@ -77,14 +78,18 @@ export function initDriver({ getJson }) {
   let trail;
   let tickHandle;
   let gpsSource;
+  let missionStarted = false;
 
   el.setup.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (missionStarted) return; // guards against a double-tap firing two submits before the form hides
     const vehicleId = el.vehicleId.value.trim();
     if (!/^[A-Za-z0-9_-]{1,32}$/.test(vehicleId)) {
       el.vehicleId.focus();
       return;
     }
+    missionStarted = true;
+    el.btnStart.disabled = true;
     const type = el.vehicleType.value;
     const backendUrl = el.backendUrl.value.trim() || window.location.origin;
     const useRealGps = el.gpsToggle.checked;
@@ -98,6 +103,8 @@ export function initDriver({ getJson }) {
     const source = useRealGps ? makeGpsSource() : makeRouteSimulator(route, SIM_SPEED_KMH);
     if (useRealGps) gpsSource = source;
 
+    const mapEl = document.getElementById("driver-map");
+    if (mapEl._leaflet_id) mapEl._leaflet_id = null; // defensive: survives initDriver() being invoked twice (e.g. bfcache restore)
     map = L.map("driver-map", { zoomControl: false });
     L.control.zoom({ position: "bottomleft" }).addTo(map);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
