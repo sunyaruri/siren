@@ -36,6 +36,7 @@ const app = createApp({
     staleS: config.staleS,
   },
   dashboardDir: path.join(import.meta.dirname, '../../dashboard'),
+  mobileDir: path.join(import.meta.dirname, '../../mobile'),
 });
 
 app.listen(config.port, (err) => {
