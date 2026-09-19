@@ -1,4 +1,4 @@
-const CACHE = "siren-mobile-v1";
+const CACHE = "siren-mobile-v2";
 const SHELL = ["./", "index.html", "style.css", "app.js", "driver.js", "citizen.js", "mqtt-client.js", "data/route.json"];
 
 self.addEventListener("install", (event) => {
@@ -13,9 +13,18 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Cache-first for the app shell; network passthrough for /api and MQTT/CDN requests never touch this worker.
+// Network-first for the app shell so edits during development show up on the next load; falls back to
+// cache only when the network is unreachable (venue WiFi drops). /api and MQTT/CDN requests bypass this worker.
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || url.pathname.includes("/api/")) return;
-  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
+  event.respondWith(
+    fetch(event.request)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+        return res;
+      })
+      .catch(() => caches.match(event.request)),
+  );
 });
