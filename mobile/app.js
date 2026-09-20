@@ -1,3 +1,6 @@
+import { initDriver } from "./driver.js";
+import { initCitizen } from "./citizen.js";
+
 const views = {
   landing: document.getElementById("view-landing"),
   driver: document.getElementById("view-driver"),
@@ -23,12 +26,11 @@ document.getElementById("backend-url").value = defaultBackendUrl();
 
 let roleChosen = false; // a double-tap on a landing button would otherwise init the same Leaflet map twice
 
-document.getElementById("btn-driver").addEventListener("click", async () => {
+document.getElementById("btn-driver").addEventListener("click", () => {
   if (roleChosen) return;
   roleChosen = true;
   show("driver");
-  const { initDriver } = await import("./driver.js");
-  initDriver({ getJson });
+  initDriver({ getJson }); // synchronous: the submit listener must exist before the user can possibly submit
 });
 
 document.getElementById("btn-citizen").addEventListener("click", async () => {
@@ -37,7 +39,6 @@ document.getElementById("btn-citizen").addEventListener("click", async () => {
   show("citizen");
   const backendUrl = defaultBackendUrl();
   const config = await getJson(`${backendUrl}/api/config`);
-  const { initCitizen } = await import("./citizen.js");
   initCitizen(config);
 });
 

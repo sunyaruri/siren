@@ -120,7 +120,9 @@ body {
 }
 
 /* --- driver setup form --- */
-.panel-form {
+/* Scoped to :not([hidden]), same reason as .view above: an unconditional display here would
+   stay visible under the map once #driver-setup gets hidden=true after "Mulai Misi". */
+.panel-form:not([hidden]) {
   display: grid;
   gap: 16px;
   padding: 20px;
@@ -155,7 +157,7 @@ body {
 }
 
 /* --- driver run --- */
-#driver-run {
+#driver-run:not([hidden]) {
   flex: 1;
   display: flex;
   flex-direction: column;
