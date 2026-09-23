@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>SIREN Mobile</title>
+    <meta name="theme-color" content="#0b0f19" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Landing: pilih peran -->
+    <main id="view-landing" class="view">
+      <div class="landing">
+        <h1>SIREN</h1>
+        <p class="landing__sub">Prioritas simpang untuk kendaraan darurat</p>
+        <button id="btn-driver" class="btn btn--primary">Saya Driver</button>
+        <button id="btn-citizen" class="btn btn--secondary">Saya Warga</button>
+      </div>
+    </main>
+
+    <!-- Driver Cockpit -->
+    <main id="view-driver" class="view" hidden>
+      <header class="topbar">
+        <button class="btn-back" data-back aria-label="Kembali">←</button>
+        <h2>Driver Cockpit</h2>
+        <span id="driver-status" class="pill pill--offline">Siap</span>
+      </header>
+
+      <form id="driver-setup" class="panel-form">
+        <label>
+          ID Kendaraan
+          <input id="vehicle-id" type="text" placeholder="AMB-01" maxlength="32" required pattern="[A-Za-z0-9_\-]{1,32}" />
+        </label>
+        <label>
+          Jenis
+          <select id="vehicle-type">
+            <option value="ambulance">Ambulans</option>
+            <option value="firetruck">Pemadam</option>
+          </select>
+        </label>
+        <label class="toggle">
+          <input id="gps-toggle" type="checkbox" />
+          Pakai GPS asli (default: simulasi rute)
+        </label>
+        <label>
+          URL Backend
+          <input id="backend-url" type="text" placeholder="http://localhost:3000" />
+        </label>
+        <button id="btn-start" type="submit" class="btn btn--primary">Mulai Misi</button>
+      </form>
+
+      <div id="driver-run" hidden>
+        <div id="driver-map"></div>
+        <div id="hud-card" class="hud-card">
+          <span id="hud-mode" class="pill pill--offline">NORMAL</span>
+          <p id="hud-name" class="hud-card__name">Belum ada simpang terdekat</p>
+          <p id="hud-distance" class="hud-card__distance">—</p>
+        </div>
+        <button id="btn-stop" class="btn btn--danger">Selesai Misi</button>
+      </div>
+    </main>
+
+    <!-- Citizen HUD -->
+    <main id="view-citizen" class="view" hidden>
+      <header class="topbar">
+        <button class="btn-back" data-back aria-label="Kembali">←</button>
+        <h2>Citizen HUD</h2>
+        <span id="citizen-status" class="pill pill--offline">MQTT terputus</span>
+      </header>
+      <div id="citizen-map"></div>
+      <div id="citizen-alerts" class="alerts">
+        <p class="empty">Belum ada kendaraan darurat terdeteksi di sekitar.</p>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,238 @@
+:root {
+  --bg: #0b0f19;
+  --surface: #121a2b;
+  --surface-2: #1a233a;
+  --text: #f3f4f6;
+  --muted: #9ca3af;
+  --border: #2a3448;
+  --normal: #64748b;
+  --priority: #22c55e;
+  --ambulance: #38bdf8;
+  --firetruck: #ef4444;
+  --offline: #ef4444;
+  --danger: #ef4444;
+  --font-ui: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.4 var(--font-ui);
+  overscroll-behavior: none;
+}
+
+/* An author rule setting `display` on the same element as [hidden] beats the browser's [hidden]{display:none}
+   UA rule, so the flex display must be scoped to :not([hidden]) or every view stays visible and stacked. */
+.view:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* --- landing --- */
+.landing {
+  margin: auto;
+  width: min(360px, 90vw);
+  display: grid;
+  gap: 14px;
+  text-align: center;
+}
+.landing h1 {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+.landing__sub {
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.btn {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  font: 600 16px var(--font-ui);
+  cursor: pointer;
+}
+.btn--primary {
+  background: var(--priority);
+  color: #06210f;
+  border-color: transparent;
+}
+.btn--secondary {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.btn--danger {
+  background: var(--danger);
+  color: var(--text);
+  border-color: transparent;
+}
+
+/* --- topbar --- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.topbar h2 {
+  flex: 1;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+}
+.btn-back {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 22px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font: 600 12px var(--font-mono);
+  background: var(--normal);
+  color: var(--bg);
+  white-space: nowrap;
+}
+.pill--priority,
+.pill--online {
+  background: var(--priority);
+}
+.pill--offline {
+  background: var(--offline);
+  color: var(--text);
+}
+
+/* --- driver setup form --- */
+/* Scoped to :not([hidden]), same reason as .view above: an unconditional display here would
+   stay visible under the map once #driver-setup gets hidden=true after "Mulai Misi". */
+.panel-form:not([hidden]) {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  overflow-y: auto;
+}
+.panel-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.panel-form input,
+.panel-form select {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: 16px var(--font-ui);
+}
+.toggle {
+  flex-direction: row;
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text);
+}
+.toggle input {
+  width: 20px;
+  height: 20px;
+}
+
+/* --- driver run --- */
+#driver-run:not([hidden]) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+#driver-map,
+#citizen-map {
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+}
+.leaflet-container {
+  font-family: var(--font-ui);
+}
+.map-tiles {
+  filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%) saturate(40%);
+}
+
+.hud-card {
+  padding: 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 6px;
+}
+.hud-card__name {
+  font-size: 15px;
+}
+.hud-card__distance {
+  font: 600 22px var(--font-mono);
+  color: var(--muted);
+}
+
+#btn-stop {
+  border-radius: 0;
+}
+
+/* --- citizen alerts --- */
+.alerts {
+  padding: 14px 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 8px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.empty {
+  color: var(--muted);
+  font-size: 14px;
+}
+.alert-card {
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.alert-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 14px var(--font-ui);
+}
+.alert-card__title::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ambulance);
+  flex-shrink: 0;
+}
+.alert-card--firetruck .alert-card__title::before {
+  background: var(--firetruck);
+}
+.alert-card__distance {
+  font: 600 18px var(--font-mono);
+  color: var(--text);
+}

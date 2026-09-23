@@ -18,6 +18,7 @@ export interface AppDeps {
   publicConfig: PublicConfig;
   intersections: Intersection[];
   dashboardDir: string;
+  mobileDir?: string;
 }
 
 /** Intersection commands are retained so an ESP32 or dashboard gets the current state on (re)connect. */
@@ -48,7 +49,7 @@ const onError: ErrorRequestHandler = (err, _req, res, _next) => {
   res.status(typeof err?.status === 'number' ? err.status : 500).json({ error: 'request failed' });
 };
 
-export function createApp({ engine, publish, publicConfig, intersections, dashboardDir }: AppDeps): express.Express {
+export function createApp({ engine, publish, publicConfig, intersections, dashboardDir, mobileDir }: AppDeps): express.Express {
   const app = express();
   app.use(cors);
   app.use(express.json({ limit: '10kb' }));
@@ -75,6 +76,7 @@ export function createApp({ engine, publish, publicConfig, intersections, dashbo
     res.json({ nextIntersection: next });
   });
 
+  if (mobileDir) app.use('/mobile', express.static(mobileDir));
   app.use(express.static(dashboardDir));
   app.use(onError);
   return app;
