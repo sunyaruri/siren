@@ -179,6 +179,10 @@ void setup() {
   mqtt.setServer(MQTT_HOST, MQTT_PORT);
   mqtt.setCallback(mqttCallback);
   mqtt.setBufferSize(512);
+  // PubSubClient's 15s default keepalive was too tight against the real public broker's round-trip
+  // latency (observed reconnect loops in Wokwi simulation); 60s gives real margin.
+  mqtt.setKeepAlive(60);
+  mqtt.setSocketTimeout(30);
   connectMqtt();
 
   enterNormal();

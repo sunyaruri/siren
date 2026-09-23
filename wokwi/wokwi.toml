@@ -1,0 +1,4 @@
+[wokwi]
+version = 1
+elf = "build/wokwi_sim.ino.elf"
+firmware = "build/wokwi_sim.ino.merged.bin"
