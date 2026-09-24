@@ -1,6 +1,6 @@
 # SIREN — Progress Log
 
-Log proses pengerjaan backend + dashboard (Devan). Terbaru di bawah.
+Log proses pengerjaan tim SIREN. Terbaru di bawah.
 
 ## Status task
 
@@ -39,7 +39,30 @@ Plan: `docs/superpowers/plans/2026-09-18-siren-backend-dashboard.md`
   (garis lurus) mengecil lagi, mis. "S1 2112 m" di tujuan. Tidak memicu lampu (di luar radius); hanya tampilan HUD.
 - Task 7: `docs/CONTRACT.md` (untuk Irfan) + `README.md`. `.gitignore` ditambah.
 
+### 2026-09-19 s.d. 2026-09-23 — Irfan: PWA + Wokwi (sudah di `main`)
+
+- PWA `mobile/`: Driver Cockpit (simulasi rute 60 km/j atau GPS asli, peta + HUD simpang berikutnya) dan
+  Citizen HUD (peta, peringatan kendaraan darurat < 1 km). Ada service worker, ikon, dan manifest.
+- Wokwi `wokwi/`: ESP32 + 6 LED, state machine NORMAL / PRIORITY (kuning 3 dtk dulu) / failsafe ttl.
+  Countdown baru dicetak ke Serial. Keep-alive MQTT 60 dtk untuk mengatasi reconnect di Wokwi.
+- Backend: `/mobile` disajikan lewat `express.static`.
+
+### 2026-09-23 — Devan
+
+- Cadangan PWA + Wokwi dibuat di branch lokal `opsional` (tidak di-push, tidak dipakai). Tim pakai versi Irfan.
+- `main` di-pull ke versi Irfan. README, `CLAUDE.md`, dan `CONTRACT.md` di-update: PWA, Wokwi,
+  `/api/config`, halaman web, keep-alive 60 dtk, salinan rute di `mobile/data/route.json`.
+- Kode Irfan dicek terhadap kontrak (topic, field `mode`/`phase`/`ttl`, validasi `vehicleId`): cocok.
+  Ini baru dari membaca kode; tes gabungan belum dilakukan.
+
+### 2026-09-24 — Devan
+
+- Fix Driver HUD: `nextIntersection` tidak lagi menunjuk simpang yang sudah dilewati (mis. "S1 2112 m" di tujuan).
+  Engine sekarang mencatat set `visited` per kendaraan. Ditambah regression test; `npm test` 22/22 pass.
+  Replay rute demo: S1 → S2 → S3 PRIORITY/NORMAL berurutan, `next` di tujuan = `null`.
+
 ## Next
 
-- Kirim `docs/CONTRACT.md` ke Irfan.
-- Tahap Final: prioritas multi-vehicle, analytics, telemetry lampu dari ESP32.
+- Tes gabungan: backend + `npm run sim` / PWA Driver + Wokwi Irfan, lalu cek LED ikut berubah.
+- Tes GPS asli dari HP lewat `cloudflared`, lalu tuning `RADIUS_M`/`PASS_M` bila perlu.
+- Tahap Final: prioritas multi-vehicle, analytics, telemetry lampu dari ESP32, display countdown (TM1637).

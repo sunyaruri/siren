@@ -90,3 +90,10 @@ test('update reports the next intersection until it is passed', () => {
   for (const [i, north] of [-30, 10].entries()) engine.update(fix(at(north)), 2000 + i * 1000);
   assert.equal(engine.update(fix(at(35)), 4000).next, null);
 });
+
+test('next never points back at an intersection already passed on this trip', () => {
+  const engine = new PriorityEngine([X], OPTS);
+  // pass X, drive out of the radius, then the road curves back so X gets closer again (still > radius)
+  drive(engine, [at(-1100), at(-990), at(-30), at(10), at(35), at(1200)]);
+  assert.equal(engine.update(fix(at(1150)), 6000).next, null);
+});

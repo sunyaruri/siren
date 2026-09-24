@@ -42,6 +42,15 @@ Respons `400`: `{ "error": "invalid gps payload", "fields": ["type"] }`.
 
 Daftar simpang `[{ id, name, lat, lng, axisA }]` (lihat tabel di bawah).
 
+### `GET /api/config`
+
+`{ topicPrefix, mqttWsUrl, radiusM, staleS }`. Dipakai dashboard dan Citizen HUD.
+
+### Halaman web
+
+- `/`: Web Dashboard (Command Center).
+- `/mobile/`: PWA, berisi Driver Cockpit dan Citizen HUD.
+
 ## MQTT
 
 Broker `broker.hivemq.com` — ESP32/Node: TCP `1883`; browser: `wss://broker.hivemq.com:8884/mqtt`.
@@ -73,6 +82,7 @@ peringatan mis. "Ambulans 300 m di belakang" jika < 1 km.
 - `PRIORITY` fase X: jika jalur lawan sedang hijau → kuning 3 dtk → merah; lalu jalur X hijau, tahan.
 - **Failsafe:** tidak menerima `PRIORITY` baru selama `ttl` detik → kembali ke siklus `NORMAL`.
 - WiFi Wokwi: SSID `Wokwi-GUEST`, tanpa password. Client ID MQTT harus unik (mis. `siren-esp32-S1-<random>`).
+- Keep-alive MQTT 60 detik (`mqtt.setKeepAlive(60)`). Wokwi sering berjalan lebih lambat dari waktu nyata, dan dengan default 15 detik broker memutus koneksi.
 - Tes tanpa backend: `npx mqtt pub -h broker.hivemq.com -t "siren-polnes26/intersection/S1/cmd" -m '{"mode":"PRIORITY","phase":"A","vehicleId":"AMB-01","vehicleType":"ambulance","ttl":15,"ts":0}'`
 
 ## Simpang demo (Jember)
@@ -86,7 +96,7 @@ peringatan mis. "Ambulans 300 m di belakang" jika < 1 km.
 ## Rute demo (untuk Route Simulator mobile)
 
 Jl. Gajah Mada (Kaliwates) → RSUD dr. Soebandi, ±4,0 km. 20 titik `[lat, lng]` (rute penuh 117 titik ada di
-`backend/scripts/route.json`; interpolasi antar-titik agar gerakan halus):
+`backend/scripts/route.json` dan salinannya `mobile/data/route.json`; interpolasi antar-titik agar gerakan halus):
 
 ```json
 [[-8.172057,113.694133],[-8.171326,113.696342],[-8.170465,113.697997],[-8.169704,113.699432],[-8.168804,113.701003],

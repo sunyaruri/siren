@@ -23,6 +23,8 @@ interface VehicleMemory {
   distances: Map<string, number>;
   /** Intersections already passed; cleared once the vehicle leaves their radius. Blocks jitter re-triggers. */
   passed: Set<string>;
+  /** Every intersection passed on this trip; never cleared, so the HUD never points back at one. */
+  visited: Set<string>;
 }
 
 /** Phase A when the vehicle comes along the main road (within 45° of axisA, either direction), else B. */
@@ -51,7 +53,7 @@ export class PriorityEngine {
     const { radiusM, passM, passHysteresisM } = this.#opts;
     let vehicle = this.#vehicles.get(gps.vehicleId);
     if (!vehicle) {
-      vehicle = { lastSeen: now, distances: new Map(), passed: new Set() };
+      vehicle = { lastSeen: now, distances: new Map(), passed: new Set(), visited: new Set() };
       this.#vehicles.set(gps.vehicleId, vehicle);
     }
     vehicle.lastSeen = now;
@@ -76,13 +78,18 @@ export class PriorityEngine {
       } else if (state.vehicleId === gps.vehicleId) {
         state.minDistanceM = Math.min(state.minDistanceM, d);
         const passedNow = state.minDistanceM <= passM && d > state.minDistanceM + passHysteresisM;
-        if (passedNow) vehicle.passed.add(it.id);
+        if (passedNow) {
+          vehicle.passed.add(it.id);
+          vehicle.visited.add(it.id);
+        }
         if (passedNow || d > radiusM) commands.push(this.#set(it.id, { mode: 'NORMAL' }, now));
       }
 
+      const after = this.#state(it.id); // state after this fix was applied
+      const heldByMe = after.mode === 'PRIORITY' && after.vehicleId === gps.vehicleId;
       const closing = prev === undefined || d <= prev;
-      if (closing && !vehicle.passed.has(it.id) && (next === null || d < next.distanceM)) {
-        next = { id: it.id, name: it.name, distanceM: Math.round(d), mode: this.#state(it.id).mode };
+      if ((heldByMe || (closing && !vehicle.visited.has(it.id))) && (next === null || d < next.distanceM)) {
+        next = { id: it.id, name: it.name, distanceM: Math.round(d), mode: after.mode };
       }
     }
     return { commands, next };
