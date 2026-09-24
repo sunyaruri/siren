@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.polije.siren",
+        "sha256_cert_fingerprints": ["DD:DB:6F:AE:F1:9B:E7:F4:B4:7A:82:85:5D:D3:5D:68:13:B4:ED:5B:36:DE:A0:BD:32:38:01:93:F8:9B:85:D9"]
+      }
+    }]

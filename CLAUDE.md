@@ -52,7 +52,10 @@ Backend layers in `backend/src/`:
 - **`server.ts`** is the only file that touches the real MQTT client and timers. At startup it publishes NORMAL to every intersection, which overwrites stale retained PRIORITY messages left from a previous run.
 - **`config.ts`** holds the env config and the list of intersections S1–S3. Their coordinates and `axisA` come from OSM traffic signals along the OSRM demo route in `scripts/route.json`.
   - `mobile/data/route.json` is an identical copy used by the PWA simulator. Change both together.
-- **Static files:** `app.ts` serves `dashboard/` at `/` and `mobile/` at `/mobile`.
+- **Static files:** `app.ts` serves `dashboard/` at `/` and `mobile/` at `/mobile`, plus `dashboard/.well-known/` at `/.well-known` (express.static hides dotfiles otherwise).
+  - `assetlinks.json` there verifies the Android TWA (`app.polije.siren`), letting it run without a URL bar. Keep the fingerprint in sync with `release/signing.keystore`.
+
+Deployment: production runs on `oracle-server` as the systemd unit `siren` (port 8080, code in `~/siren`). It is exposed as `https://siren.polije.app` through the existing `cloudflared-cliproxy` tunnel on that host. See `README.md` → Deploy for how to update or remove it. `release/` (APK, AAB, keystore) is gitignored.
 
 MQTT conventions (prefix `siren-polnes26`):
 - **`intersection/{id}/cmd`**: RETAINED.

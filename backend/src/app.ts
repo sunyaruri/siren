@@ -77,6 +77,8 @@ export function createApp({ engine, publish, publicConfig, intersections, dashbo
   });
 
   if (mobileDir) app.use('/mobile', express.static(mobileDir));
+  // express.static hides dotfiles by default; Android TWA verification needs /.well-known/assetlinks.json.
+  app.use('/.well-known', express.static(`${dashboardDir}/.well-known`));
   app.use(express.static(dashboardDir));
   app.use(onError);
   return app;

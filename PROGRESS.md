@@ -61,6 +61,12 @@ Plan: `docs/superpowers/plans/2026-09-18-siren-backend-dashboard.md`
   Engine sekarang mencatat set `visited` per kendaraan. Ditambah regression test; `npm test` 22/22 pass.
   Replay rute demo: S1 → S2 → S3 PRIORITY/NORMAL berurutan, `next` di tujuan = `null`.
 
+- Deploy ke `oracle-server`: service systemd `siren` (port 8080) + aturan `siren.polije.app` di tunnel Cloudflare
+  yang sudah ada di server, dan DNS CNAME di zone `polije.app`. Dicek: `/api/config`, `/mobile/`, `/`, dan
+  `POST /api/gps` via `https://siren.polije.app` → 200. Dua situs lain di tunnel yang sama tetap 200.
+- APK Android dari PWABuilder (package `app.polije.siren`) disimpan di `release/` (gitignored).
+  `/.well-known/assetlinks.json` disajikan dan lolos verifikasi Google Digital Asset Links, jadi APK terbuka tanpa URL bar.
+
 ## Next
 
 - Tes gabungan: backend + `npm run sim` / PWA Driver + Wokwi Irfan, lalu cek LED ikut berubah.

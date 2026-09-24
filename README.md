@@ -32,6 +32,20 @@ Buka `http://localhost:3000/mobile/`, lalu pilih peran:
 
 Di HP, buka lewat URL `cloudflared`, karena HTTPS wajib untuk GPS dan untuk install ke home screen. Field *Backend URL* di form Driver bisa diganti kalau backend tidak berada di origin yang sama. PWA punya service worker (network-first), jadi tampilannya tetap terbuka walau WiFi sempat putus.
 
+## Deploy (online)
+
+- URL publik: **https://siren.polije.app** (dashboard) dan **https://siren.polije.app/mobile/** (PWA).
+- APK Android (TWA dari PWABuilder) ada di `release/SIREN.apk`, yang tidak ikut di-commit. Bagikan file itu langsung. Keystore dan password-nya ada di `release/` juga; simpan baik-baik, karena dibutuhkan untuk membuat versi APK berikutnya.
+- Server: `oracle-server` (Ubuntu arm64). Kode ada di `~/siren` dan jalan sebagai service systemd `siren` di port 8080.
+- Akses publik lewat tunnel Cloudflare yang sudah ada di server itu (`cloudflared-cliproxy`, config `~/cloudflareTunnel/tunnel-config.yml`), dengan aturan `siren.polije.app → http://127.0.0.1:8080`. DNS `siren.polije.app` adalah CNAME ke tunnel tersebut.
+
+Update kode di server: upload hasil `git archive HEAD backend dashboard mobile` ke `~/siren`, lalu jalankan `npm ci --omit=dev` di `~/siren/backend` dan `sudo systemctl restart siren`.
+
+Hapus setelah proyek selesai:
+1. Hapus DNS record `siren.polije.app` di Cloudflare.
+2. Hapus 2 baris `siren.polije.app` dari `~/cloudflareTunnel/tunnel-config.yml` (ada backup `tunnel-config.yml.bak-siren-*`), lalu jalankan `sudo systemctl restart cloudflared-cliproxy`.
+3. Jalankan `sudo systemctl disable --now siren`, lalu hapus `/etc/systemd/system/siren.service` dan folder `~/siren`.
+
 ## Wokwi (`wokwi/`)
 
 1 ESP32 = 1 simpang (`INTERSECTION_ID` di `sketch.ino`), dengan 6 LED: fase A (jalan utama) di pin 25/26/27 dan fase B (jalan silang) di pin 14/32/33.
