@@ -34,7 +34,7 @@ export interface NextIntersection {
 export type GpsParseResult = { ok: true; value: GpsInput } | { ok: false; fields: string[] };
 
 // vehicleId is embedded in MQTT topics, so '/', '+' and '#' must never get through.
-const VEHICLE_ID = /^[A-Za-z0-9_-]{1,32}$/;
+export const VEHICLE_ID = /^[A-Za-z0-9_-]{1,32}$/;
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 /** Validates an untrusted POST /api/gps body. */

@@ -107,6 +107,17 @@ export class PriorityEngine {
     return commands;
   }
 
+  /** Drops one vehicle right away (mission ended, demo vehicle stopped) and releases what it held. */
+  forget(vehicleId: string, now: number): Command[] {
+    this.#vehicles.delete(vehicleId);
+    return this.#intersections
+      .filter((it) => {
+        const state = this.#state(it.id);
+        return state.mode === 'PRIORITY' && state.vehicleId === vehicleId;
+      })
+      .map((it) => this.#set(it.id, { mode: 'NORMAL' }, now));
+  }
+
   /** Drops every vehicle and returns all intersections to NORMAL (demo panel reset). */
   reset(now: number): Command[] {
     this.#vehicles.clear();

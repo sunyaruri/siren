@@ -363,6 +363,34 @@ h2 {
   color: var(--firetruck);
 }
 
+.demo__reset {
+  display: grid;
+  gap: 6px;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.route-pin {
+  display: inline-block;
+  transform: translate(-50%, -50%);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font: 700 12px var(--font-mono);
+  white-space: nowrap;
+  color: var(--bg);
+  border: 2px solid var(--bg);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
+}
+.route-pin--start {
+  background: var(--text);
+}
+.route-pin--end {
+  background: var(--firetruck);
+  color: var(--text);
+}
+
 .leaflet-container {
   font-family: var(--font-ui);
 }

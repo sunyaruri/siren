@@ -50,7 +50,7 @@ Backend layers in `backend/src/`:
     - **Two vehicles:** first-come per intersection (multi-vehicle priority rules are deferred to the Final stage).
 - **`app.ts` (`createApp`)** is thin Express glue: it validates input, calls the engine, and publishes through an injected `Publish` function. Tests inject a fake publisher, so no broker is needed.
   - **Mission code:** `POST /api/gps` and `GET /api/mission` require `Authorization: Bearer <code>` with a code from `MISSION_CODES` (default `DEMO-112`), otherwise 401 and nothing is published. It answers the "empty ambulance" abuse question; production would use per-trip tokens from Command Center 112. The public broker itself has no ACL, so anyone can still publish to it directly.
-- **Panel Demo (`demo.ts`, `demo-api.ts`):** `/api/demo` routes, locked by `X-Demo-Key` = `DEMO_KEY` (unset = 403). They change mission codes, radius (by mutating the engine's options object, which is `config`), the simulated citizen position and the simulator speed at runtime, in memory only. `DemoRunner` drives server-side vehicles along the route; `server.ts` ticks it every second and feeds the fixes through `ingestGps`, the same path as `POST /api/gps`. Every change republishes the retained `demo` topic.
+- **Panel Demo (`demo.ts`, `demo-api.ts`):** `/api/demo` routes, locked by `X-Demo-Key` = `DEMO_KEY` (unset = 403). They change mission codes, radius (by mutating the engine's options object, which is `config`), the simulated citizen position and the simulator speed at runtime, in memory only. `DemoRunner` drives server-side vehicles along the route; `server.ts` ticks it every second and feeds the fixes through `ingestGps`, the same path as `POST /api/gps`. A paused vehicle keeps reporting its position with `speed` 0, so its light stays held and Citizen HUD alerts freeze; reset rewinds vehicles to their start (paused) after `removeVehicle`, so the engine starts a fresh trip for them. Every change republishes the retained `demo` topic.
   - `route.ts` (`createRoute`) is shared by the runner and `scripts/sim.ts`.
 - **`server.ts`** is the only file that touches the real MQTT client and timers. At startup it publishes NORMAL to every intersection, which overwrites stale retained PRIORITY messages left from a previous run.
 - **`config.ts`** holds the env config and the list of intersections S1–S3. Their coordinates and `axisA` come from OSM traffic signals along the OSRM demo route in `scripts/route.json`.
@@ -63,7 +63,7 @@ Deployment: production runs on `oracle-server` as the systemd unit `siren` (port
 MQTT conventions (prefix `siren-polnes26`):
 - **`intersection/{id}/cmd`**: RETAINED.
   - PRIORITY carries a `ttl`, and the backend re-sends it every `REFRESH_S`. Consumers fall back to NORMAL if it is not refreshed within `ttl`; the ESP32 failsafe and the dashboard both mirror this.
-- **`vehicle/{id}`**: not retained.
+- **`vehicle/{id}`**: not retained. `{ vehicleId, gone: true, ts }` (no lat/lng) means the trip ended now (`POST /api/mission/end`, demo stop/reset); consumers drop the vehicle instead of waiting `staleS`. `removeVehicle` in `publish.ts` sends it after `engine.forget` releases the vehicle's intersections.
 - **`demo`**: RETAINED Panel Demo settings (`citizen` position, `radiusM`, `simSpeedKmh`), consumed by the Citizen HUD and the dashboard.
 - **`vehicleId` validation:** restricted to `[A-Za-z0-9_-]` because it is embedded in topic names.
 
@@ -72,14 +72,15 @@ Dashboard (`dashboard/`, plain HTML, CSS and ES modules, no build):
 - **Untrusted broker:** the broker is public, so every MQTT message is shape-checked and text is rendered with `textContent`.
 - **Map tiles:** standard OSM tiles darkened with a CSS filter. CARTO dark tiles now require an API key and render a watermark.
 - **Colors:** defined once as CSS custom properties in `style.css`; `app.js` reads them back through `getComputedStyle`.
-- **Panel Demo (`demo-panel.js`):** a drawer over the map; the key is kept in `sessionStorage`. `app.js` handles the `demo` topic (citizen dot, zone radius) whether or not the drawer is open.
+- **Route:** `GET /api/route` draws the demo route faintly with start (▶ Mulai) and end (H Tujuan) pins.
+- **Panel Demo (`demo-panel.js`):** a drawer over the map; the key is kept in `sessionStorage`. Dragging the citizen or radius slider sends a throttled `PUT` (≤ 1 per 150 ms), so the dot, the circles and the phones follow live. `app.js` handles the `demo` topic (citizen dot, zone radius) whether or not the drawer is open.
 
 PWA (`mobile/`, Irfan's; served at `/mobile/`; plain HTML and JS, no build):
 - **Structure:** a single `index.html` holds three views (landing, driver, citizen), and `app.js` switches between them. The back button reloads the page to reset.
 - **Driver (`driver.js`):**
   - Position comes from a route simulator over `data/route.json`, or from real GPS.
   - It sends `POST /api/gps` every second and shows `nextIntersection` on a Leaflet map with a HUD.
-  - A *Kode Misi* is required: the form checks it with `GET /api/mission` before starting, then sends it on every `POST /api/gps`; a 401 mid-mission stops the run.
+  - A *Kode Misi* is required: the form checks it with `GET /api/mission` before starting, then sends it on every `POST /api/gps`; a 401 mid-mission stops the run. *Selesai Misi* calls `POST /api/mission/end`.
   - The route simulator's speed comes from `simSpeedKmh` in `/api/config` (Panel Demo), read once when a mission starts.
   - The *Backend URL* field (under *Pengaturan lanjutan*) defaults to the page origin.
 - **Citizen (`citizen.js`):** uses `mqtt-client.js` (mqtt.js over WSS plus `haversineM`/`bearingDeg` helpers) to subscribe to `vehicle/+`. No map: one glanceable state, "Aman" or a full-screen red/blue alert for the nearest vehicle within `radiusM` that is still closing in.

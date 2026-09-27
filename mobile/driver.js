@@ -92,6 +92,7 @@ export function initDriver({ getJson }) {
   let tickHandle;
   let gpsSource;
   let missionStarted = false;
+  let endMission = null;
 
   el.setup.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -108,6 +109,13 @@ export function initDriver({ getJson }) {
     const backendUrl = el.backendUrl.value.trim() || window.location.origin;
     const useRealGps = el.gpsToggle.checked;
     const auth = { authorization: `Bearer ${el.missionCode.value.trim().toUpperCase()}` };
+    // Releases held lights and clears this vehicle from the dashboard/Citizen HUDs now, not after the stale timeout.
+    endMission = () =>
+      fetch(`${backendUrl}/api/mission/end`, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...auth },
+        body: JSON.stringify({ vehicleId }),
+      }).catch(() => {});
 
     const problem = await checkMission(backendUrl, auth);
     if (problem) {
@@ -214,6 +222,8 @@ export function initDriver({ getJson }) {
   function stop(reason = "Selesai") {
     clearInterval(tickHandle);
     gpsSource?.stop();
+    endMission?.();
+    endMission = null;
     el.status.textContent = reason;
     el.status.className = "pill pill--offline";
   }

@@ -39,11 +39,16 @@ Di HP, buka lewat URL `cloudflared`, karena HTTPS wajib untuk GPS dan untuk inst
 Tombol **Panel Demo** di kanan atas dashboard membuka laci kontrol untuk presentasi. Isi kunci (`DEMO_KEY`), lalu:
 - **Kendaraan simulasi:** atur kecepatan (juga dipakai simulasi rute di HP driver untuk misi baru), pilih jenis dan
   titik mulai (mis. *Mulai sebelum S1*, tepat di luar radius), lalu **Jalankan**. Tidak perlu HP driver kedua atau terminal.
+  **Jeda** membekukan kendaraan di tempat (lampu tetap hijau, jarak di HP warga ikut berhenti), **Lanjutkan** meneruskan,
+  **Hapus** menghilangkan kendaraan simulasi dari peta dan HP warga seketika.
 - **Posisi warga:** geser di sepanjang rute atau pilih *Setelah S1/S2/S3*. HP warga yang mencentang *Posisi simulasi*
   langsung pindah ke titik itu, dan titik putih di peta ikut pindah.
 - **Radius prioritas:** ubah radius trigger (mis. 600 m) tanpa restart.
 - **Kode misi:** tambah/hapus kode yang diterima Driver Cockpit.
-- **Reset demo:** hentikan kendaraan simulasi dan kembalikan semua simpang ke NORMAL.
+- **Reset demo:** semua simpang NORMAL, kendaraan simulasi kembali ke titik mulainya dalam keadaan dijeda; tekan
+  **Lanjutkan** untuk mengulang skenario.
+
+Peta dashboard menampilkan garis rute demo dengan penanda **▶ Mulai** (Jl. Gajah Mada) dan **H Tujuan** (RSUD dr. Soebandi).
 
 Skenario cepat: radius 600 m, kecepatan 120 km/j, warga *Setelah S1*, kendaraan *Mulai sebelum S1* → lampu S1 hijau
 ±3 dtk dan HP warga bergetar ±7 dtk setelah **Jalankan**. Semua pengaturan hilang saat server restart.

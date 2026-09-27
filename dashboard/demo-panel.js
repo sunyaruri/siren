@@ -2,6 +2,7 @@
 // Every call carries the demo key; the backend refuses all of it when DEMO_KEY is not set.
 const KEY_STORAGE = "siren-demo-key";
 const POLL_MS = 2000;
+const LIVE_MS = 150; // slider drag: at most one PUT per this interval
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -17,7 +18,8 @@ const el = {
   type: $("demo-type"),
   start: $("demo-start"),
   run: $("demo-run"),
-  stop: $("demo-stop"),
+  pause: $("demo-pause"),
+  clear: $("demo-clear"),
   runs: $("demo-runs"),
   citizen: $("demo-citizen"),
   citizenOut: $("demo-citizen-out"),
@@ -66,6 +68,22 @@ export function initDemoPanel({ onToggle }) {
       throw new Error("Panel Demo mati di server (DEMO_KEY belum diset).");
     throw new Error(`Gagal (HTTP ${res.status}).`);
   }
+
+  /** While a slider is dragged: send the latest value at most every LIVE_MS, without re-rendering the panel. */
+  function livePut() {
+    let timer = null;
+    let pending = null;
+    return (body) => {
+      pending = body;
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        api("PUT", "", pending).catch(() => {});
+      }, LIVE_MS);
+    };
+  }
+  const liveRadius = livePut();
+  const liveCitizen = livePut();
 
   async function act(request) {
     try {
@@ -136,7 +154,7 @@ export function initDemoPanel({ onToggle }) {
       ...(state.runs.length
         ? state.runs.map((r) => {
             const li = document.createElement("li");
-            li.textContent = `${LABEL[r.type]} ${r.vehicleId} · ${km(r.alongM)} / ${km(state.routeLengthM)} · ${r.speedKmh} km/j`;
+            li.textContent = `${LABEL[r.type]} ${r.vehicleId} · ${km(r.alongM)} / ${km(state.routeLengthM)} · ${r.paused ? "dijeda" : `${r.speedKmh} km/j`}`;
             return li;
           })
         : [
@@ -146,6 +164,11 @@ export function initDemoPanel({ onToggle }) {
             }),
           ]),
     );
+
+    // One button: pause while anything moves, otherwise resume.
+    const moving = state.runs.some((r) => !r.paused);
+    el.pause.textContent = moving ? "Jeda" : "Lanjutkan";
+    el.pause.disabled = el.clear.disabled = state.runs.length === 0;
 
     el.codes.replaceChildren(
       ...state.codes.map((code) => {
@@ -174,7 +197,7 @@ export function initDemoPanel({ onToggle }) {
     if (!open) return;
     // Keeps the running-vehicle list moving while the panel is open.
     pollHandle = setInterval(() => {
-      if (state?.runs.length) act(api("GET"));
+      if (state?.runs.some((r) => !r.paused)) act(api("GET"));
     }, POLL_MS);
     if (key) act(api("GET"));
     else el.key.focus();
@@ -198,12 +221,14 @@ export function initDemoPanel({ onToggle }) {
   );
   el.radius.addEventListener("input", () => {
     el.radiusOut.textContent = `${el.radius.value} m`;
+    liveRadius({ radiusM: Number(el.radius.value) });
   });
   el.radius.addEventListener("change", () =>
     act(api("PUT", "", { radiusM: Number(el.radius.value) })),
   );
   el.citizen.addEventListener("input", () => {
     el.citizenOut.textContent = whereOnRoute(Number(el.citizen.value));
+    liveCitizen({ citizenAlongM: Number(el.citizen.value) });
   });
   el.citizen.addEventListener("change", () =>
     act(api("PUT", "", { citizenAlongM: Number(el.citizen.value) })),
@@ -217,7 +242,15 @@ export function initDemoPanel({ onToggle }) {
       }),
     ),
   );
-  el.stop.addEventListener("click", () => act(api("POST", "/stop")));
+  el.pause.addEventListener("click", () =>
+    act(
+      api(
+        "POST",
+        state.runs.some((r) => !r.paused) ? "/pause" : "/resume",
+      ),
+    ),
+  );
+  el.clear.addEventListener("click", () => act(api("POST", "/clear")));
   el.reset.addEventListener("click", () => act(api("POST", "/reset")));
 
   el.codeForm.addEventListener("submit", (e) => {

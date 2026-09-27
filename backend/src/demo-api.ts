@@ -5,7 +5,7 @@ import { parseDemoPatch, parseRun, type DemoRunner, type DemoSettings } from './
 import type { PriorityEngine } from './priority.ts';
 import type { Route } from './route.ts';
 import type { PublicConfig } from './app.ts';
-import { publishCommands, type Publish } from './publish.ts';
+import { publishCommands, removeVehicle, type Publish } from './publish.ts';
 
 export interface DemoDeps {
   /** Expected X-Demo-Key header. Empty = panel disabled. */
@@ -102,14 +102,30 @@ export function demoRouter({ demo, engine, publish, publicConfig, intersections,
     res.json(state(now));
   });
 
-  router.post('/stop', (_req, res) => {
-    demo.runner.stopAll();
-    res.json(state(Date.now()));
+  router.post('/pause', (_req, res) => {
+    const now = Date.now();
+    demo.runner.pauseAll(now);
+    res.json(state(now));
   });
 
+  router.post('/resume', (_req, res) => {
+    const now = Date.now();
+    demo.runner.resumeAll(now);
+    res.json(state(now));
+  });
+
+  // Removes the demo vehicles for good: lights released and markers/alerts dropped right away.
+  router.post('/clear', (_req, res) => {
+    const now = Date.now();
+    for (const id of demo.runner.removeAll()) removeVehicle(publish, engine, publicConfig.topicPrefix, id, now);
+    res.json(state(now));
+  });
+
+  // Back to the start: every intersection NORMAL, demo vehicles parked (paused) at their start point with a fresh trip.
   router.post('/reset', (_req, res) => {
     const now = Date.now();
-    demo.runner.stopAll();
+    // `gone` first so the dashboard drops the old trail instead of drawing a line back to the start.
+    for (const id of demo.runner.rewindAll()) removeVehicle(publish, engine, publicConfig.topicPrefix, id, now);
     publishCommands(publish, publicConfig.topicPrefix, engine.reset(now));
     publishDemo(publish, publicConfig, demo, now);
     res.json(state(now));

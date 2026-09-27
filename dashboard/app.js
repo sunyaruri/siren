@@ -29,9 +29,10 @@ async function getJson(url) {
   return res.json();
 }
 
-const [config, intersections] = await Promise.all([
+const [config, intersections, route] = await Promise.all([
   getJson("/api/config"),
   getJson("/api/intersections"),
+  getJson("/api/route"),
 ]);
 
 // --- map -------------------------------------------------------------------
@@ -59,6 +60,23 @@ const vehicleIcon = (type) =>
     iconSize: [32, 32],
   });
 
+// Demo route: faint line plus start and end pins, so it is clear where the vehicles come from and go to.
+const routePin = (modifier, text) =>
+  L.divIcon({
+    className: "",
+    html: `<span class="route-pin route-pin--${modifier}">${text}</span>`,
+    iconSize: null,
+  });
+if (route.length > 1) {
+  L.polyline(route, { color: token("--muted"), weight: 3, opacity: 0.35 }).addTo(map);
+  L.marker(route[0], { icon: routePin("start", "▶ Mulai") })
+    .addTo(map)
+    .bindTooltip("Titik awal rute · Jl. Gajah Mada");
+  L.marker(route[route.length - 1], { icon: routePin("end", "H Tujuan") })
+    .addTo(map)
+    .bindTooltip("Titik akhir rute · RSUD dr. Soebandi");
+}
+
 /** id -> { info, zone, dot, cmd, expiresAt } */
 const junctions = new Map();
 for (const info of intersections) {
@@ -82,6 +100,7 @@ for (const info of intersections) {
 const bounds = L.latLngBounds([]);
 for (const info of intersections)
   bounds.extend(L.latLng(info.lat, info.lng).toBounds(config.radiusM * 2));
+for (const point of route) bounds.extend(point);
 map.fitBounds(bounds, { padding: [20, 20] });
 
 /** id -> { marker, trail, data, lastSeen } */
@@ -139,7 +158,8 @@ function renderVehicles() {
     const held = [...junctions.values()]
       .filter((j) => j.cmd.vehicleId === id)
       .map((j) => j.info.id);
-    const speed = `${Math.round(v.data.speed ?? 0)} km/j`;
+    const speed =
+      v.data.speed === 0 ? "berhenti" : `${Math.round(v.data.speed ?? 0)} km/j`;
     return card(
       id,
       LABEL[v.data.type],
@@ -205,7 +225,22 @@ function onCmd(id, cmd) {
   applyJunction(j);
 }
 
+function dropVehicle(id, reason) {
+  const v = vehicles.get(id);
+  if (!v) return;
+  v.marker.remove();
+  v.trail.remove();
+  vehicles.delete(id);
+  log(`${id} ${reason}`);
+  renderVehicles();
+}
+
 function onVehicle(msg) {
+  // `gone`: the mission ended or the demo vehicle was stopped, so drop it now instead of after staleS.
+  if (msg?.gone === true && typeof msg.vehicleId === "string") {
+    dropVehicle(msg.vehicleId, "selesai misi");
+    return;
+  }
   if (
     typeof msg?.vehicleId !== "string" ||
     !Object.hasOwn(LABEL, msg.type) ||
@@ -262,13 +297,8 @@ setInterval(() => {
     }
   }
   for (const [id, v] of vehicles) {
-    if (now - v.lastSeen > config.staleS * 1000) {
-      v.marker.remove();
-      v.trail.remove();
-      vehicles.delete(id);
-      log(`${id} hilang dari radar`);
-      renderVehicles();
-    }
+    if (now - v.lastSeen > config.staleS * 1000)
+      dropVehicle(id, "hilang dari radar");
   }
 }, 1000);
 

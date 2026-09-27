@@ -164,6 +164,11 @@ export function initCitizen(config) {
 
   // Messages come from a public broker: check shape before use.
   function onVehicle(msg) {
+    // `gone`: mission ended or demo vehicle stopped; clear its alert now instead of after staleS.
+    if (msg?.gone === true && typeof msg.vehicleId === "string") {
+      if (vehicles.delete(msg.vehicleId)) render();
+      return;
+    }
     if (
       typeof msg?.vehicleId !== "string" ||
       !Object.hasOwn(LABEL, msg.type) ||

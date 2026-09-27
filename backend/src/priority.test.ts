@@ -98,6 +98,14 @@ test('next never points back at an intersection already passed on this trip', ()
   assert.equal(engine.update(fix(at(1150)), 6000).next, null);
 });
 
+test('forget releases only what that vehicle held', () => {
+  const engine = new PriorityEngine([X], OPTS);
+  drive(engine, [at(-900), at(-800)]);
+  assert.deepEqual(engine.forget('OTHER', 5000), []);
+  assert.deepEqual(engine.forget('AMB-01', 5000), normal(5000));
+  assert.deepEqual(engine.tick(6000), []);
+});
+
 test('reset releases held intersections and forgets vehicles', () => {
   const engine = new PriorityEngine([X], OPTS);
   drive(engine, [at(-900), at(-800)]);

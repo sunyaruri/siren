@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { connect } from 'mqtt';
-import { createApp, ingestGps, type PublicConfig } from './app.ts';
+import { createApp, type PublicConfig } from './app.ts';
 import { config, intersections } from './config.ts';
 import { publishDemo, type DemoDeps } from './demo-api.ts';
 import { DemoRunner } from './demo.ts';
 import { PriorityEngine, type Command } from './priority.ts';
-import { publishCommands, type Publish } from './publish.ts';
+import { ingestGps, publishCommands, type Publish } from './publish.ts';
 import { createRoute } from './route.ts';
 
 const client = connect(config.mqttUrl, {

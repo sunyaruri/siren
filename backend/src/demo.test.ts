@@ -33,7 +33,7 @@ test('DemoRunner moves at the set speed and drops the run after the route end', 
   const runner = new DemoRunner(route);
   const id = runner.start('ambulance', 1000, 36, 0); // 36 km/h = 10 m/s
   assert.equal(id, 'AMB-SIM1');
-  assert.deepEqual(runner.list(10_000), [{ vehicleId: 'AMB-SIM1', type: 'ambulance', alongM: 1100, speedKmh: 36 }]);
+  assert.deepEqual(runner.list(10_000), [{ vehicleId: 'AMB-SIM1', type: 'ambulance', alongM: 1100, speedKmh: 36, paused: false }]);
 
   const [fix] = runner.tick(10_000);
   assert.equal(fix.vehicleId, 'AMB-SIM1');
@@ -41,4 +41,23 @@ test('DemoRunner moves at the set speed and drops the run after the route end', 
 
   assert.equal(runner.tick(1_000_000).length, 1, 'last fix sits at the route end');
   assert.deepEqual(runner.tick(1_001_000), []);
+
+  runner.start('firetruck', 0, 36, 0);
+  assert.deepEqual(runner.removeAll(), ['DMK-SIM2']);
+  assert.deepEqual(runner.list(0), []);
+});
+
+test('DemoRunner pause freezes the vehicle in place, resume continues, rewind parks it at its start', () => {
+  const runner = new DemoRunner(route);
+  runner.start('ambulance', 100, 36, 0); // 10 m/s
+  runner.pauseAll(10_000);
+  const frozen = runner.tick(60_000)[0];
+  assert.equal(frozen.speed, 0, 'a paused vehicle reports speed 0');
+  assert.deepEqual(runner.list(60_000)[0], { vehicleId: 'AMB-SIM1', type: 'ambulance', alongM: 200, speedKmh: 36, paused: true });
+
+  runner.resumeAll(60_000);
+  assert.equal(runner.list(70_000)[0].alongM, 300);
+
+  assert.deepEqual(runner.rewindAll(), ['AMB-SIM1']);
+  assert.deepEqual(runner.list(99_000)[0], { vehicleId: 'AMB-SIM1', type: 'ambulance', alongM: 100, speedKmh: 36, paused: true });
 });

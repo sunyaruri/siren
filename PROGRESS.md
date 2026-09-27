@@ -108,6 +108,20 @@ Plan: `docs/superpowers/plans/2026-09-18-siren-backend-dashboard.md`
   Regression test ditambah (36/36 pass). Replay rute demo radius 600/850/1000: tiap simpang PRIORITAS → NORMAL sekali.
 - Kunci Panel Demo produksi diganti jadi yang mudah diketik atas permintaan Devan.
 
+- Commit `0140a6f` (Panel Demo + fix re-trigger) di-push.
+- Slider posisi warga & radius sekarang live saat digeser (PUT di-throttle 150 ms): titik putih, lingkaran, dan HP warga
+  ikut bergerak. Dicek di Playwright: titik pindah di tengah drag.
+- Bug: setelah *Stop semua*, ikon ambulans tertinggal ±15 dtk (menunggu stale). Sekarang stop/reset/*Selesai Misi*
+  langsung melepas simpang (`engine.forget`) dan publish `{ vehicleId, gone: true }` ke topic `vehicle`; dashboard dan
+  Citizen HUD langsung menghapusnya. Endpoint baru `POST /api/mission/end`. `npm test` 39/39. Dicek: ikon hilang ≤ 1,2 dtk
+  setelah Stop maupun Selesai Misi, simpang kembali NORMAL.
+
+- Panel Demo: *Stop semua* diganti **Jeda/Lanjutkan** (kendaraan diam di tempat, lampu tetap hijau, jarak di HP warga
+  ikut beku) dan **Hapus**. **Reset** sekarang mengembalikan kendaraan simulasi ke titik mulainya (dijeda) + semua
+  simpang NORMAL. Dashboard menampilkan garis rute dengan penanda ▶ Mulai dan H Tujuan (`GET /api/route`).
+  `npm test` 40/40. Dicek di Playwright: jeda → HP warga beku di 878 m selama 5 dtk dan S1 tetap PRIORITAS; lanjutkan →
+  801 m; reset → kendaraan di 0,00 km, semua NORMAL; hapus → ikon hilang.
+
 ## Next
 
 - Tes gabungan: backend + `npm run sim` / PWA Driver + Wokwi Irfan, lalu cek LED ikut berubah.

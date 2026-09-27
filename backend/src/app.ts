@@ -1,8 +1,8 @@
 import express, { type ErrorRequestHandler, type RequestHandler } from 'express';
-import { parseGps, type GpsInput, type Intersection, type NextIntersection } from './contract.ts';
+import { parseGps, VEHICLE_ID, type Intersection } from './contract.ts';
 import { demoRouter, type DemoDeps } from './demo-api.ts';
 import type { PriorityEngine } from './priority.ts';
-import { publishCommands, type Publish } from './publish.ts';
+import { ingestGps, removeVehicle, type Publish } from './publish.ts';
 
 /** Values the dashboard needs, so prefix/radius are not hardcoded twice. */
 export interface PublicConfig {
@@ -25,20 +25,6 @@ export interface AppDeps {
   demo?: DemoDeps;
   dashboardDir: string;
   mobileDir?: string;
-}
-
-/** Shared by POST /api/gps and the server-side demo vehicles. */
-export function ingestGps(
-  publish: Publish,
-  engine: PriorityEngine,
-  topicPrefix: string,
-  gps: GpsInput,
-  now: number,
-): NextIntersection | null {
-  publish(`${topicPrefix}/vehicle/${gps.vehicleId}`, { ...gps, ts: now }, false);
-  const { commands, next } = engine.update(gps, now);
-  publishCommands(publish, topicPrefix, commands);
-  return next;
 }
 
 // ponytail: open CORS, auth is the mission code header, not the origin; restrict origins before any real deployment.
@@ -96,8 +82,24 @@ export function createApp({
     res.json(intersections);
   });
 
+  // Demo route as [lat, lng] pairs, for the dashboard's route line and start/end markers.
+  app.get('/api/route', (_req, res) => {
+    res.json(demo ? demo.route.points.map((p) => [p.lat, p.lng]) : []);
+  });
+
   // Lets the driver app reject a wrong code on the setup form instead of mid-mission.
   app.get('/api/mission', requireMission, (_req, res) => {
+    res.sendStatus(204);
+  });
+
+  // Driver pressed "Selesai Misi". Only the vehicleId is needed; it is validated like in POST /api/gps.
+  app.post('/api/mission/end', requireMission, (req, res) => {
+    const vehicleId: unknown = req.body?.vehicleId;
+    if (typeof vehicleId !== 'string' || !VEHICLE_ID.test(vehicleId)) {
+      res.status(400).json({ error: 'invalid vehicleId' });
+      return;
+    }
+    removeVehicle(publish, engine, publicConfig.topicPrefix, vehicleId, Date.now());
     res.sendStatus(204);
   });
 

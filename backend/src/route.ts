@@ -1,6 +1,7 @@
 import { bearingDeg, haversineM, type LatLng } from './geo.ts';
 
 export interface Route {
+  points: LatLng[];
   totalM: number;
   /** Position and heading after travelling `distanceM` along the route (linear interpolation per segment). */
   pointAt(distanceM: number): { pos: LatLng; heading: number };
@@ -14,6 +15,7 @@ export function createRoute(points: LatLng[]): Route {
   const totalM = cumulative[cumulative.length - 1];
 
   return {
+    points,
     totalM,
     pointAt(distanceM) {
       const d = Math.min(Math.max(distanceM, 0), totalM);

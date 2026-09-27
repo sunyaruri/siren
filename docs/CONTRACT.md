@@ -23,6 +23,12 @@ dan tidak ada yang di-publish. Di dunia nyata kode ini diterbitkan Command Cente
 
 Cek kode misi sebelum mulai: `204` jika valid, `401` jika tidak.
 
+### `POST /api/mission/end`
+
+Dipanggil saat driver menekan *Selesai Misi*: `{ "vehicleId": "AMB-01" }` + header kode misi. Backend langsung
+melepas simpang yang dipegang kendaraan itu dan publish pesan `gone` (lihat topic `vehicle`), tanpa menunggu 15 dtk.
+Respons `204`; `400` kalau `vehicleId` tidak valid; `401` kalau kode salah.
+
 ### `POST /api/gps`
 
 Kirim tiap 1 detik selama misi aktif. Berhenti kirim = misi selesai (backend melepas simpang setelah 15 dtk).
@@ -48,6 +54,11 @@ Respons `200` (untuk Driver HUD):
 `nextIntersection` = simpang terdekat yang sedang didekati; `null` jika tidak ada.
 Respons `400`: `{ "error": "invalid gps payload", "fields": ["type"] }`. Respons `401`: kode misi tidak valid (lihat atas).
 
+### `GET /api/route`
+
+Rute demo sebagai `[[lat, lng], …]` (isi sama dengan `backend/scripts/route.json`). Dipakai dashboard untuk garis rute
+dan penanda titik awal/akhir.
+
 ### `GET /api/intersections`
 
 Daftar simpang `[{ id, name, lat, lng, axisA }]` (lihat tabel di bawah).
@@ -66,8 +77,10 @@ Semua wajib header `X-Demo-Key` = env `DEMO_KEY`. Env kosong → `403`, kunci sa
 | `GET /api/demo` | - | status: `codes`, `radiusM`, `citizenAlongM`, `speedKmh`, `routeLengthM`, `stops`, `runs` |
 | `PUT /api/demo` | `{ codes?, radiusM?, citizenAlongM?, speedKmh? }` | ubah pengaturan langsung, lalu publish topic `demo` |
 | `POST /api/demo/run` | `{ type, startM }` | jalankan kendaraan simulasi di server dari `startM` meter sepanjang rute |
-| `POST /api/demo/stop` | - | hentikan semua kendaraan simulasi |
-| `POST /api/demo/reset` | - | stop kendaraan simulasi, semua simpang NORMAL |
+| `POST /api/demo/pause` | - | jeda semua kendaraan simulasi (tetap di tempat, `speed` 0, lampu tetap dipegang) |
+| `POST /api/demo/resume` | - | lanjutkan kendaraan yang dijeda |
+| `POST /api/demo/clear` | - | hapus semua kendaraan simulasi (langsung dilepas + pesan `gone`) |
+| `POST /api/demo/reset` | - | semua simpang NORMAL, kendaraan simulasi kembali ke titik mulai (dijeda, trip baru) |
 
 Pengaturan ini hanya di memori: restart server = kembali ke default env.
 
@@ -95,6 +108,9 @@ Selama kendaraan masih mendekat, backend mengirim ulang `PRIORITY` tiap 5 detik.
 ```json
 { "vehicleId": "AMB-01", "type": "ambulance", "lat": -8.16, "lng": 113.70, "speed": 60, "heading": 45, "ts": 1789000000000 }
 ```
+
+Saat misi selesai atau kendaraan simulasi dihentikan, topic yang sama menerima `{ "vehicleId": "AMB-01", "gone": true, "ts": … }`
+(tanpa `lat`/`lng`): hapus kendaraan itu sekarang juga.
 
 Citizen HUD: subscribe `siren-polnes26/vehicle/+`, hitung jarak (Haversine) dari posisi HP sendiri, tampilkan
 peringatan mis. "Ambulans 300 m di belakang" jika < 1 km.

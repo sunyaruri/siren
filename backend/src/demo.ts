@@ -21,6 +21,7 @@ export interface RunStatus {
   type: VehicleType;
   alongM: number;
   speedKmh: number;
+  paused: boolean;
 }
 
 type Parsed<T> = { ok: true; value: T } | { ok: false; fields: string[] };
@@ -67,10 +68,17 @@ interface Run {
   type: VehicleType;
   startM: number;
   speedKmh: number;
-  startedAt: number;
+  /** Distance along the route at `movingSince` (or where it is parked while paused). */
+  alongM: number;
+  /** null = paused. */
+  movingSince: number | null;
 }
 
-/** Server-side demo vehicles driving the route. Pure: time is passed in, server.ts owns the timer. */
+/**
+ * Server-side demo vehicles driving the route. Pure: time is passed in, server.ts owns the timer.
+ * A paused vehicle keeps reporting the same position, so it stays on the map, keeps its green light and the Citizen HUD
+ * alert freezes at its distance instead of disappearing.
+ */
 export class DemoRunner {
   readonly #route: Route;
   readonly #runs = new Map<string, Run>();
@@ -83,21 +91,45 @@ export class DemoRunner {
   start(type: VehicleType, startM: number, speedKmh: number, now: number): string {
     this.#count += 1;
     const vehicleId = `${type === 'ambulance' ? 'AMB' : 'DMK'}-SIM${this.#count}`;
-    this.#runs.set(vehicleId, { type, startM, speedKmh, startedAt: now });
+    this.#runs.set(vehicleId, { type, startM, speedKmh, alongM: startM, movingSince: now });
     return vehicleId;
   }
 
-  stopAll(): void {
-    this.#runs.clear();
+  pauseAll(now: number): void {
+    for (const run of this.#runs.values()) {
+      run.alongM = this.#alongM(run, now);
+      run.movingSince = null;
+    }
   }
 
-  /** One GPS fix per running vehicle. A run is dropped right after its fix at the end of the route. */
+  resumeAll(now: number): void {
+    for (const run of this.#runs.values()) run.movingSince ??= now;
+  }
+
+  /** Puts every vehicle back at its start point, paused. Returns their ids (their trip has to be forgotten). */
+  rewindAll(): string[] {
+    for (const run of this.#runs.values()) {
+      run.alongM = run.startM;
+      run.movingSince = null;
+    }
+    return [...this.#runs.keys()];
+  }
+
+  /** Removes every vehicle and returns the ids that were running. */
+  removeAll(): string[] {
+    const ids = [...this.#runs.keys()];
+    this.#runs.clear();
+    return ids;
+  }
+
+  /** One GPS fix per vehicle. A run is dropped right after its fix at the end of the route. */
   tick(now: number): GpsInput[] {
     const fixes: GpsInput[] = [];
     for (const [vehicleId, run] of this.#runs) {
       const alongM = this.#alongM(run, now);
       const { pos, heading } = this.#route.pointAt(alongM);
-      fixes.push({ vehicleId, type: run.type, lat: pos.lat, lng: pos.lng, speed: run.speedKmh, heading });
+      const speed = run.movingSince === null ? 0 : run.speedKmh;
+      fixes.push({ vehicleId, type: run.type, lat: pos.lat, lng: pos.lng, speed, heading });
       if (alongM >= this.#route.totalM) this.#runs.delete(vehicleId);
     }
     return fixes;
@@ -109,10 +141,12 @@ export class DemoRunner {
       type: run.type,
       alongM: Math.round(Math.min(this.#alongM(run, now), this.#route.totalM)),
       speedKmh: run.speedKmh,
+      paused: run.movingSince === null,
     }));
   }
 
   #alongM(run: Run, now: number): number {
-    return run.startM + (run.speedKmh / 3.6) * ((now - run.startedAt) / 1000);
+    if (run.movingSince === null) return run.alongM;
+    return run.alongM + (run.speedKmh / 3.6) * ((now - run.movingSince) / 1000);
   }
 }

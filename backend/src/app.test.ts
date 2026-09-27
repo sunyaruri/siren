@@ -96,8 +96,12 @@ test('POST /api/gps publishes vehicle + retained PRIORITY and returns nextInters
   assert.equal((published[2].payload as { mode: string }).mode, 'PRIORITY');
 });
 
-test('GET /api/intersections and /api/config', async () => {
+test('GET /api/intersections, /api/config and /api/route', async () => {
   assert.deepEqual(await (await fetch(`${base}/api/intersections`)).json(), [X]);
+  assert.deepEqual(await (await fetch(`${base}/api/route`)).json(), [
+    [-0.01, 0],
+    [0, 0],
+  ]);
   const config = (await (await fetch(`${base}/api/config`)).json()) as { topicPrefix: string };
   assert.equal(config.topicPrefix, 'test');
 });
@@ -158,20 +162,59 @@ test('PUT /api/demo changes codes and radius live and publishes the retained dem
   await demoApi('PUT', '/', { codes: ['CODE-1'], radiusM: 1000 });
 });
 
-test('POST /api/demo/run starts a server-side vehicle; reset stops it and publishes NORMAL', async () => {
+test('POST /api/demo/run starts a vehicle; reset parks it at its start and publishes gone + NORMAL', async () => {
   const run = (await (await demoApi('POST', '/run', { type: 'firetruck', startM: 100 })).json()) as { runs: { vehicleId: string }[] };
   assert.deepEqual(
     run.runs.map((r) => r.vehicleId),
     ['DMK-SIM1'],
   );
   published.length = 0;
-  const reset = (await (await demoApi('POST', '/reset')).json()) as { runs: unknown[] };
-  assert.deepEqual(reset.runs, []);
+  const reset = (await (await demoApi('POST', '/reset')).json()) as { runs: { alongM: number; paused: boolean }[] };
+  assert.deepEqual(reset.runs, [{ vehicleId: 'DMK-SIM1', type: 'firetruck', alongM: 100, speedKmh: 60, paused: true }]);
   assert.deepEqual(
-    published.map((p) => [p.topic, (p.payload as { mode?: string }).mode]),
+    published.map((p) => p.topic),
+    ['test/vehicle/DMK-SIM1', 'test/intersection/X/cmd', 'test/demo'],
+  );
+  assert.equal((published[0].payload as { gone?: boolean }).gone, true);
+});
+
+test('pause and resume toggle the demo vehicles; clear removes them and publishes gone', async () => {
+  const paused = (await (await demoApi('POST', '/pause')).json()) as { runs: { paused: boolean }[] };
+  assert.ok(paused.runs.every((r) => r.paused));
+  const resumed = (await (await demoApi('POST', '/resume')).json()) as { runs: { paused: boolean }[] };
+  assert.ok(resumed.runs.every((r) => !r.paused));
+
+  published.length = 0;
+  const cleared = (await (await demoApi('POST', '/clear')).json()) as { runs: unknown[] };
+  assert.deepEqual(cleared.runs, []);
+  assert.deepEqual(
+    published.map((p) => [p.topic, (p.payload as { gone?: boolean }).gone]),
+    [['test/vehicle/DMK-SIM1', true]],
+  );
+});
+
+test('POST /api/mission/end releases the vehicle at once and publishes gone', async () => {
+  const lat = (northM: number) => northM / 111_195;
+  await postGps(JSON.stringify({ vehicleId: 'AMB-END', type: 'ambulance', lat: lat(-900), lng: 0 }));
+  await postGps(JSON.stringify({ vehicleId: 'AMB-END', type: 'ambulance', lat: lat(-800), lng: 0 }));
+  published.length = 0;
+  const end = (body: object, code = 'CODE-1') =>
+    fetch(`${base}/api/mission/end`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${code}` },
+      body: JSON.stringify(body),
+    });
+  assert.equal((await end({ vehicleId: 'AMB-END' }, 'WRONG')).status, 401);
+  assert.equal((await end({ vehicleId: 'a/b' })).status, 400);
+  assert.equal((await end({ vehicleId: 'AMB-END' })).status, 204);
+  assert.deepEqual(
+    published.map((p) => {
+      const payload = p.payload as { mode?: string; gone?: boolean };
+      return [p.topic, payload.mode ?? payload.gone];
+    }),
     [
       ['test/intersection/X/cmd', 'NORMAL'],
-      ['test/demo', undefined],
+      ['test/vehicle/AMB-END', true],
     ],
   );
 });

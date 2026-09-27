@@ -67,7 +67,8 @@
             </div>
             <div class="demo__row">
               <button id="demo-run" class="btn btn--primary">Jalankan</button>
-              <button id="demo-stop" class="btn">Stop semua</button>
+              <button id="demo-pause" class="btn" disabled>Jeda</button>
+              <button id="demo-clear" class="btn" disabled>Hapus</button>
             </div>
             <ul id="demo-runs" class="demo__runs"></ul>
           </section>
@@ -99,7 +100,10 @@
             </form>
           </section>
 
-          <button id="demo-reset" class="btn btn--danger">Reset demo</button>
+          <div class="demo__reset">
+            <button id="demo-reset" class="btn btn--danger">Reset demo</button>
+            <p class="demo__hint">Semua simpang NORMAL, kendaraan simulasi kembali ke titik mulainya (dijeda). Tekan Lanjutkan untuk jalan lagi.</p>
+          </div>
         </div>
       </aside>
     </main>
