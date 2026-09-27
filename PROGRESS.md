@@ -67,6 +67,25 @@ Plan: `docs/superpowers/plans/2026-09-18-siren-backend-dashboard.md`
 - APK Android dari PWABuilder (package `app.polije.siren`) disimpan di `release/` (gitignored).
   `/.well-known/assetlinks.json` disajikan dan lolos verifikasi Google Digital Asset Links, jadi APK terbuka tanpa URL bar.
 
+### 2026-09-26 — Devan
+
+- Citizen HUD didesain ulang sesuai masukan Azrieal (atas izin, meski `mobile/` modul Irfan): peta dihapus, diganti satu
+  status besar. "Aman" saat tidak ada ancaman; layar penuh kedip merah-biru saat kendaraan darurat < 1 km dan mendekat,
+  dengan panah arah relatif terhadap heading GPS (fallback arah mata angin saat diam), jarak, "Menepi & beri jalan".
+  Getar `[400,150,400]` tiap 3 dtk selama mendekat, berhenti saat menjauh/lewat. Wake lock agar layar tetap menyala.
+  Checkbox *Posisi simulasi* untuk demo di luar Jember. Cache SW → `siren-mobile-v4`.
+- Dicek di Playwright (390×844, geolocation diemulasi) + `npm run sim`: Aman → alert "DARI BELAKANG" 983 m … 17 m →
+  Aman setelah lewat; getar terpanggil tiap ±3 dtk lalu `vibrate(0)`; mode GPS diam → "DARI ARAH BARAT DAYA";
+  `prefers-reduced-motion` mematikan kedip. Console tanpa error.
+
+- Masukan Azrieal: tombol driver tanpa gerbang (celah "ambulans kosong"). Ditambah **Kode Misi**: `POST /api/gps` dan
+  `GET /api/mission` wajib `Authorization: Bearer <kode>` dari env `MISSION_CODES` (default `DEMO-112`), selain itu 401
+  dan tidak ada publish. Form driver cek kode dulu sebelum mulai; `npm run sim` punya `--code`. Test baru 2 → 25/25 pass.
+  Catatan pitching: di produksi kode diterbitkan Command Center 112 / RS rujukan per perjalanan; broker publik belum ber-ACL.
+- Landing + form driver didesain ulang: kartu peran (Petugas Darurat / Warga), kartu Kode Misi, ID + jenis satu baris,
+  URL backend & GPS asli di *Pengaturan lanjutan*. Sekalian fix bawaan: checkbox GPS asli tertumpuk, pill HUD melebar.
+  Dicek di Playwright 360 & 390 px: tanpa scroll horizontal; kode salah → pesan error; `DEMO-112` → misi jalan. Cache SW → v5.
+
 ## Next
 
 - Tes gabungan: backend + `npm run sim` / PWA Driver + Wokwi Irfan, lalu cek LED ikut berubah.

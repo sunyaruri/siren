@@ -22,13 +22,15 @@ npm test                        # unit + HTTP tests
 npm run typecheck
 ```
 
-Opsi sim: `--id AMB-01 --type ambulance|firetruck --speed <km/j> --interval <ms> --url <backend>`.
+Opsi sim: `--id AMB-01 --type ambulance|firetruck --speed <km/j> --interval <ms> --url <backend> --code <kode misi>` (default `DEMO-112`).
 
 ## PWA (`mobile/`)
 
 Buka `http://localhost:3000/mobile/`, lalu pilih peran:
-- **Driver Cockpit**: isi ID kendaraan dan pilih jenisnya (Ambulans/Pemadam). Posisi berasal dari simulasi rute (60 km/j) atau GPS asli (toggle). Peta menampilkan jejak kendaraan, dan HUD menampilkan simpang berikutnya, jaraknya, serta status NORMAL/PRIORITAS.
-- **Citizen HUD**: peta posisi warga dari GPS, plus kartu peringatan untuk kendaraan darurat dalam radius 1 km.
+- **Driver Cockpit**: isi **Kode Misi** (demo: `DEMO-112`), ID kendaraan, dan jenisnya (Ambulans/Pemadam). Tanpa kode yang valid, backend menolak GPS (401) sehingga lampu tidak berubah. Posisi berasal dari simulasi rute (60 km/j) atau GPS asli (toggle). Peta menampilkan jejak kendaraan, dan HUD menampilkan simpang berikutnya, jaraknya, serta status NORMAL/PRIORITAS.
+- **Citizen HUD**: tanpa peta. Tampil "Aman", atau layar penuh berkedip merah-biru saat ambulans/pemadam dalam 1 km dan
+  sedang mendekat: panah + arah (dari belakang/depan/kiri/kanan), jarak, "Menepi & beri jalan", dan HP bergetar tiap 3 dtk
+  (Android, hanya saat app terbuka dan layar menyala). Centang *Posisi simulasi* untuk demo di luar Jember.
 
 Di HP, buka lewat URL `cloudflared`, karena HTTPS wajib untuk GPS dan untuk install ke home screen. Field *Backend URL* di form Driver bisa diganti kalau backend tidak berada di origin yang sama. PWA punya service worker (network-first), jadi tampilannya tetap terbuka walau WiFi sempat putus.
 
@@ -69,5 +71,6 @@ Cara menjalankan di wokwi.com:
 | `RADIUS_M` | `1000` | radius trigger prioritas |
 | `PASS_M` / `PASS_HYSTERESIS_M` | `50` / `20` | deteksi "sudah lewat simpang" |
 | `TTL_S` / `REFRESH_S` / `STALE_S` | `15` / `5` / `15` | failsafe ESP32, interval refresh, batas kendaraan hilang |
+| `MISSION_CODES` | `DEMO-112` | kode misi yang diterima, pisahkan dengan koma |
 
 Akses dari HP (GPS asli): `cloudflared tunnel --url http://localhost:3000` lalu pakai URL `https://…trycloudflare.com` di app.

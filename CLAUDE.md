@@ -23,7 +23,7 @@ npm run typecheck                           # tsc, typecheck only (noEmit)
 npx mqtt sub -h broker.hivemq.com -t "siren-polnes26/#" -v        # watch MQTT traffic
 ```
 
-Sim options: `--id`, `--type ambulance|firetruck`, `--speed <km/h>`, `--interval <ms>`, `--url`.
+Sim options: `--id`, `--type ambulance|firetruck`, `--speed <km/h>`, `--interval <ms>`, `--url`, `--code` (mission code, default `DEMO-112`).
 
 ## TypeScript without a build step
 
@@ -49,6 +49,7 @@ Backend layers in `backend/src/`:
     - **Phase:** A when the vehicle approaches within 45° of `axisA` (mod 180), otherwise B.
     - **Two vehicles:** first-come per intersection (multi-vehicle priority rules are deferred to the Final stage).
 - **`app.ts` (`createApp`)** is thin Express glue: it validates input, calls the engine, and publishes through an injected `Publish` function. Tests inject a fake publisher, so no broker is needed.
+  - **Mission code:** `POST /api/gps` and `GET /api/mission` require `Authorization: Bearer <code>` with a code from `MISSION_CODES` (default `DEMO-112`), otherwise 401 and nothing is published. It answers the "empty ambulance" abuse question; production would use per-trip tokens from Command Center 112. The public broker itself has no ACL, so anyone can still publish to it directly.
 - **`server.ts`** is the only file that touches the real MQTT client and timers. At startup it publishes NORMAL to every intersection, which overwrites stale retained PRIORITY messages left from a previous run.
 - **`config.ts`** holds the env config and the list of intersections S1–S3. Their coordinates and `axisA` come from OSM traffic signals along the OSRM demo route in `scripts/route.json`.
   - `mobile/data/route.json` is an identical copy used by the PWA simulator. Change both together.
@@ -74,8 +75,12 @@ PWA (`mobile/`, Irfan's; served at `/mobile/`; plain HTML and JS, no build):
 - **Driver (`driver.js`):**
   - Position comes from a route simulator at a fixed 60 km/h over `data/route.json`, or from real GPS.
   - It sends `POST /api/gps` every second and shows `nextIntersection` on a Leaflet map with a HUD.
-  - The *Backend URL* field defaults to the page origin.
-- **Citizen (`citizen.js`):** uses `mqtt-client.js` (mqtt.js over WSS plus a `haversineM` helper) to subscribe to `vehicle/+`, and shows alert cards for vehicles within 1 km of the phone's GPS position.
+  - A *Kode Misi* is required: the form checks it with `GET /api/mission` before starting, then sends it on every `POST /api/gps`; a 401 mid-mission stops the run.
+  - The *Backend URL* field (under *Pengaturan lanjutan*) defaults to the page origin.
+- **Citizen (`citizen.js`):** uses `mqtt-client.js` (mqtt.js over WSS plus `haversineM`/`bearingDeg` helpers) to subscribe to `vehicle/+`. No map: one glanceable state, "Aman" or a full-screen red/blue alert for the nearest vehicle within `radiusM` that is still closing in.
+  - Direction (belakang/depan/kiri/kanan) is relative to the phone's GPS heading, which only counts above 1 m/s; a stationary phone gets a compass direction instead.
+  - While alerting it calls `navigator.vibrate` every 3 s and holds a screen wake lock. Both only work with the page in the foreground; iOS Safari has no Vibration API.
+  - The *Posisi simulasi* checkbox pins the phone to a fixed point on the demo route (between S1 and S2), for demos away from Jember.
 - **`sw.js`:** a network-first app-shell cache. Bump `CACHE` whenever the shell file list changes.
 
 Wokwi (`wokwi/`, Irfan's):

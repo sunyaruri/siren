@@ -29,6 +29,7 @@ const app = createApp({
   engine,
   publish,
   intersections,
+  missionCodes: config.missionCodes,
   publicConfig: {
     topicPrefix: config.topicPrefix,
     mqttWsUrl: config.mqttWsUrl,

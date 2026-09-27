@@ -13,6 +13,16 @@ Mobile App ──POST /api/gps (tiap 1 dtk)──▶ Backend ──publish──
 
 ## HTTP (base URL: `http://<laptop-devan>:3000`, atau URL tunnel `cloudflared`)
 
+### Kode misi (wajib untuk driver)
+
+`POST /api/gps` dan `GET /api/mission` wajib membawa header `Authorization: Bearer <kode misi>`. Kode diatur lewat env
+`MISSION_CODES` (default demo `DEMO-112`). Tanpa kode atau kode salah → `401 { "error": "invalid mission code" }`,
+dan tidak ada yang di-publish. Di dunia nyata kode ini diterbitkan Command Center 112 / RS rujukan per perjalanan.
+
+### `GET /api/mission`
+
+Cek kode misi sebelum mulai: `204` jika valid, `401` jika tidak.
+
 ### `POST /api/gps`
 
 Kirim tiap 1 detik selama misi aktif. Berhenti kirim = misi selesai (backend melepas simpang setelah 15 dtk).
@@ -36,7 +46,7 @@ Respons `200` (untuk Driver HUD):
 ```
 
 `nextIntersection` = simpang terdekat yang sedang didekati; `null` jika tidak ada.
-Respons `400`: `{ "error": "invalid gps payload", "fields": ["type"] }`.
+Respons `400`: `{ "error": "invalid gps payload", "fields": ["type"] }`. Respons `401`: kode misi tidak valid (lihat atas).
 
 ### `GET /api/intersections`
 

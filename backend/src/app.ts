@@ -17,6 +17,8 @@ export interface AppDeps {
   publish: Publish;
   publicConfig: PublicConfig;
   intersections: Intersection[];
+  /** Codes a driver must send as `Authorization: Bearer <code>` before their GPS can trigger priority. */
+  missionCodes: ReadonlySet<string>;
   dashboardDir: string;
   mobileDir?: string;
 }
@@ -26,11 +28,11 @@ export function publishCommands(publish: Publish, topicPrefix: string, commands:
   for (const { intersectionId, cmd } of commands) publish(`${topicPrefix}/intersection/${intersectionId}/cmd`, cmd, true);
 }
 
-// ponytail: open CORS, the prototype API has no auth; restrict origins before any real deployment.
+// ponytail: open CORS, auth is the mission code header, not the origin; restrict origins before any real deployment.
 const cors: RequestHandler = (req, res, next) => {
   res.set({
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'content-type',
+    'Access-Control-Allow-Headers': 'content-type, authorization',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
   });
   if (req.method === 'OPTIONS') {
@@ -49,8 +51,26 @@ const onError: ErrorRequestHandler = (err, _req, res, _next) => {
   res.status(typeof err?.status === 'number' ? err.status : 500).json({ error: 'request failed' });
 };
 
-export function createApp({ engine, publish, publicConfig, intersections, dashboardDir, mobileDir }: AppDeps): express.Express {
+export function createApp({
+  engine,
+  publish,
+  publicConfig,
+  intersections,
+  missionCodes,
+  dashboardDir,
+  mobileDir,
+}: AppDeps): express.Express {
   const app = express();
+
+  const requireMission: RequestHandler = (req, res, next) => {
+    const code = /^Bearer (.+)$/.exec(req.get('authorization') ?? '')?.[1];
+    if (code === undefined || !missionCodes.has(code)) {
+      res.status(401).json({ error: 'invalid mission code' });
+      return;
+    }
+    next();
+  };
+
   app.use(cors);
   app.use(express.json({ limit: '10kb' }));
 
@@ -62,7 +82,12 @@ export function createApp({ engine, publish, publicConfig, intersections, dashbo
     res.json(intersections);
   });
 
-  app.post('/api/gps', (req, res) => {
+  // Lets the driver app reject a wrong code on the setup form instead of mid-mission.
+  app.get('/api/mission', requireMission, (_req, res) => {
+    res.sendStatus(204);
+  });
+
+  app.post('/api/gps', requireMission, (req, res) => {
     const parsed = parseGps(req.body);
     if (!parsed.ok) {
       res.status(400).json({ error: 'invalid gps payload', fields: parsed.fields });

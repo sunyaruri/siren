@@ -16,6 +16,7 @@ const app = createApp({
   publish,
   publicConfig: { topicPrefix: 'test', mqttWsUrl: 'wss://example.invalid/mqtt', radiusM: 1000, staleS: 15 },
   intersections: [X],
+  missionCodes: new Set(['CODE-1']),
   dashboardDir: import.meta.dirname,
 });
 
@@ -28,8 +29,27 @@ before(async () => {
 });
 after(() => server.close());
 
-const postGps = (body: string) =>
-  fetch(`${base}/api/gps`, { method: 'POST', headers: { 'content-type': 'application/json' }, body });
+const postGps = (body: string, code = 'CODE-1') =>
+  fetch(`${base}/api/gps`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${code}` },
+    body,
+  });
+
+test('POST /api/gps rejects a missing or unknown mission code with 401 and publishes nothing', async () => {
+  published.length = 0;
+  const gps = JSON.stringify({ vehicleId: 'AMB-01', type: 'ambulance', lat: 0, lng: 0 });
+  const noCode = await fetch(`${base}/api/gps`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: gps });
+  assert.equal(noCode.status, 401);
+  assert.equal((await postGps(gps, 'WRONG')).status, 401);
+  assert.deepEqual(published, []);
+});
+
+test('GET /api/mission checks the code', async () => {
+  const check = (code: string) => fetch(`${base}/api/mission`, { headers: { authorization: `Bearer ${code}` } });
+  assert.equal((await check('CODE-1')).status, 204);
+  assert.equal((await check('WRONG')).status, 401);
+});
 
 test('POST /api/gps rejects an invalid payload with 400 and the bad fields', async () => {
   const res = await postGps(JSON.stringify({ vehicleId: 'A', type: 'taxi', lat: 0, lng: 0 }));
@@ -79,6 +99,7 @@ test('serves /.well-known/assetlinks.json from the dashboard dir (Android TWA ve
     publish,
     publicConfig: { topicPrefix: 'test', mqttWsUrl: 'wss://example.invalid/mqtt', radiusM: 1000, staleS: 15 },
     intersections: [X],
+    missionCodes: new Set(),
     dashboardDir: dir,
   });
   const srv = wellKnownApp.listen(0);

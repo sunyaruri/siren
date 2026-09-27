@@ -7,6 +7,8 @@ const el = {
   status: document.getElementById("driver-status"),
   setup: document.getElementById("driver-setup"),
   run: document.getElementById("driver-run"),
+  missionCode: document.getElementById("mission-code"),
+  error: document.getElementById("driver-error"),
   vehicleId: document.getElementById("vehicle-id"),
   vehicleType: document.getElementById("vehicle-type"),
   gpsToggle: document.getElementById("gps-toggle"),
@@ -72,6 +74,17 @@ function makeGpsSource() {
   };
 }
 
+/** Returns null when the backend accepts the mission code, otherwise a message for the setup form. */
+async function checkMission(backendUrl, headers) {
+  try {
+    const res = await fetch(`${backendUrl}/api/mission`, { headers });
+    if (res.ok) return null;
+    return res.status === 401 ? "Kode misi tidak valid atau sudah tidak berlaku." : `Backend menolak (HTTP ${res.status}).`;
+  } catch {
+    return "Backend tidak bisa dihubungi. Cek URL Backend di Pengaturan lanjutan.";
+  }
+}
+
 export function initDriver({ getJson }) {
   let map;
   let marker;
@@ -90,9 +103,19 @@ export function initDriver({ getJson }) {
     }
     missionStarted = true;
     el.btnStart.disabled = true;
+    el.error.textContent = "";
     const type = el.vehicleType.value;
     const backendUrl = el.backendUrl.value.trim() || window.location.origin;
     const useRealGps = el.gpsToggle.checked;
+    const auth = { authorization: `Bearer ${el.missionCode.value.trim().toUpperCase()}` };
+
+    const problem = await checkMission(backendUrl, auth);
+    if (problem) {
+      el.error.textContent = problem;
+      missionStarted = false;
+      el.btnStart.disabled = false;
+      return;
+    }
 
     el.setup.hidden = true;
     el.run.hidden = false;
@@ -146,7 +169,7 @@ export function initDriver({ getJson }) {
       try {
         const res = await fetch(`${backendUrl}/api/gps`, {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...auth },
           body: JSON.stringify({
             vehicleId,
             type,
@@ -159,6 +182,8 @@ export function initDriver({ getJson }) {
         if (res.ok) {
           const body = await res.json();
           applyHud(body.nextIntersection);
+        } else if (res.status === 401) {
+          stop("Kode ditolak"); // code revoked mid-mission: stop sending, lights fall back via ttl
         }
       } catch (err) {
         console.error("[gps post]", err.message);
@@ -183,12 +208,12 @@ export function initDriver({ getJson }) {
     el.hudDistance.textContent = `${Math.round(next.distanceM)} m`;
   }
 
-  function stop() {
+  function stop(reason = "Selesai") {
     clearInterval(tickHandle);
     gpsSource?.stop();
-    el.status.textContent = "Selesai";
+    el.status.textContent = reason;
     el.status.className = "pill pill--offline";
   }
 
-  el.btnStop.addEventListener("click", stop);
+  el.btnStop.addEventListener("click", () => stop());
 }

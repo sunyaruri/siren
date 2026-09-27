@@ -1,77 +1,141 @@
-import { connectMqtt, haversineM } from "./mqtt-client.js";
+import { bearingDeg, connectMqtt, haversineM } from "./mqtt-client.js";
 
-const L = window.L;
 const LABEL = { ambulance: "Ambulans", firetruck: "Pemadam" };
-const WARN_RADIUS_M = 1000;
+const COMPASS = ["utara", "timur laut", "timur", "tenggara", "selatan", "barat daya", "barat", "barat laut"];
+// Arrow points at where the vehicle is, relative to the direction the citizen is travelling.
+const SIDE = {
+  back: { arrow: "↓", text: "DARI BELAKANG" },
+  front: { arrow: "↑", text: "DARI DEPAN" },
+  right: { arrow: "→", text: "DARI KANAN" },
+  left: { arrow: "←", text: "DARI KIRI" },
+};
+const MOVING_AWAY_TOLERANCE_M = 2; // GPS noise margin before "moving away" hides the alert
+const BUZZ_PATTERN = [400, 150, 400];
+const BUZZ_EVERY_MS = 3000;
+// On the demo route between S1 and S2, heading toward the hospital like the ambulance (2350 m along route.json).
+const SIM_POSITION = { lat: -8.15914, lng: 113.7098, heading: 35 };
 
 const el = {
   status: document.getElementById("citizen-status"),
-  alerts: document.getElementById("citizen-alerts"),
+  alert: document.getElementById("citizen-alert"),
+  arrow: document.getElementById("citizen-arrow"),
+  title: document.getElementById("citizen-title"),
+  direction: document.getElementById("citizen-direction"),
+  distance: document.getElementById("citizen-distance"),
+  detail: document.getElementById("citizen-detail"),
+  sim: document.getElementById("citizen-sim"),
 };
 
-export function initCitizen(config) {
-  const map = L.map("citizen-map", { zoomControl: false });
-  L.control.zoom({ position: "bottomleft" }).addTo(map);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    className: "map-tiles",
-    attribution: "&copy; OpenStreetMap contributors",
-  }).addTo(map);
-  map.setView([-8.166, 113.706], 14); // demo route fallback center, replaced once self-position arrives
+const formatDistance = (m) => (m >= 1000 ? `${+(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`);
 
-  let selfPos = null;
-  let selfMarker = null;
-  /** vehicleId -> { marker, data, lastSeen } */
+export function initCitizen(config) {
+  /** Citizen position { lat, lng, heading | null }, or null while waiting for GPS. */
+  let me = null;
+  let gpsPos = null;
+  let lastBuzz = 0;
+  /** vehicleId -> { msg, distanceM, prevDistanceM, lastSeen } */
   const vehicles = new Map();
 
+  // Vibration and the alert only work while the screen is on, so keep it on while this view is open.
+  // The browser drops the lock whenever the page is hidden, so take it again on return.
+  const keepAwake = () => navigator.wakeLock?.request("screen").catch(() => {});
+  keepAwake();
+  document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && keepAwake());
+
+  function setMe(pos, { newOrigin = false } = {}) {
+    me = pos;
+    for (const v of vehicles.values()) {
+      if (newOrigin) v.distanceM = undefined; // old distances are not comparable
+      updateDistance(v);
+    }
+    render();
+  }
+
+  function updateDistance(v) {
+    v.prevDistanceM = v.distanceM;
+    v.distanceM = me ? haversineM(me.lat, me.lng, v.msg.lat, v.msg.lng) : undefined;
+  }
+
+  const movingAway = (v) => v.prevDistanceM !== undefined && v.distanceM > v.prevDistanceM + MOVING_AWAY_TOLERANCE_M;
+
+  function side(v) {
+    const bearing = bearingDeg(me.lat, me.lng, v.msg.lat, v.msg.lng);
+    if (me.heading === null)
+      return {
+        arrow: "",
+        text: `DARI ARAH ${COMPASS[Math.round(bearing / 45) % 8].toUpperCase()}`,
+      };
+    const relative = (bearing - me.heading + 360) % 360;
+    if (relative >= 135 && relative <= 225) return SIDE.back;
+    if (relative <= 45 || relative >= 315) return SIDE.front;
+    return relative < 180 ? SIDE.right : SIDE.left;
+  }
+
+  function show(state, { arrow = "", title, direction = "", distance = "", detail = "" }) {
+    el.alert.className = `citizen citizen--${state}`;
+    el.arrow.textContent = arrow;
+    el.title.textContent = title;
+    el.direction.textContent = direction;
+    el.distance.textContent = distance;
+    el.detail.textContent = detail;
+  }
+
+  function render() {
+    const threat = [...vehicles.values()]
+      .filter((v) => v.distanceM !== undefined && v.distanceM <= config.radiusM && !movingAway(v))
+      .sort((a, b) => a.distanceM - b.distanceM)[0];
+
+    if (!threat) {
+      if (lastBuzz) navigator.vibrate?.(0);
+      lastBuzz = 0;
+      if (!me)
+        show("wait", {
+          title: "Menunggu posisi Anda…",
+          detail: "Izinkan akses lokasi.",
+        });
+      else
+        show("safe", {
+          arrow: "✓",
+          title: "Aman",
+          detail: `Tidak ada kendaraan darurat mendekat dalam ${formatDistance(config.radiusM)}.`,
+        });
+      return;
+    }
+
+    const { arrow, text } = side(threat);
+    show("danger", {
+      arrow,
+      title: `${LABEL[threat.msg.type].toUpperCase()} MENDEKAT`,
+      direction: text,
+      distance: formatDistance(threat.distanceM),
+      detail: "Menepi & beri jalan",
+    });
+    // Repeats while the vehicle keeps closing in; Android only (iOS Safari has no Vibration API).
+    const now = Date.now();
+    if (now - lastBuzz >= BUZZ_EVERY_MS) {
+      navigator.vibrate?.(BUZZ_PATTERN);
+      lastBuzz = now;
+    }
+  }
+
   navigator.geolocation.watchPosition(
-    (pos) => {
-      selfPos = [pos.coords.latitude, pos.coords.longitude];
-      if (!selfMarker) {
-        selfMarker = L.circleMarker(selfPos, { radius: 8, color: "#f3f4f6", fillOpacity: 1 }).addTo(map);
-        map.setView(selfPos, 15);
-      } else {
-        selfMarker.setLatLng(selfPos);
-      }
-      renderAlerts();
+    ({ coords }) => {
+      // Heading is only meaningful while moving; a parked phone reports NaN or a stale value.
+      const heading = Number.isFinite(coords.heading) && coords.speed > 1 ? coords.heading : null;
+      gpsPos = { lat: coords.latitude, lng: coords.longitude, heading };
+      if (!el.sim.checked) setMe(gpsPos);
     },
-    (err) => console.error("[gps]", err.message),
-    { enableHighAccuracy: true, maximumAge: 2000 },
+    (err) => {
+      if (!el.sim.checked && !me)
+        show("wait", {
+          title: "GPS tidak tersedia",
+          detail: err.code === err.PERMISSION_DENIED ? "Izin lokasi ditolak." : err.message,
+        });
+    },
+    { enableHighAccuracy: true, maximumAge: 1000 },
   );
 
-  function renderAlerts() {
-    const items = [];
-    for (const [id, v] of vehicles) {
-      if (!selfPos) continue;
-      const distanceM = haversineM(selfPos[0], selfPos[1], v.data.lat, v.data.lng);
-      if (distanceM <= WARN_RADIUS_M) items.push({ id, type: v.data.type, distanceM });
-    }
-    items.sort((a, b) => a.distanceM - b.distanceM);
-
-    el.alerts.replaceChildren(
-      ...(items.length
-        ? items.map(({ id, type, distanceM }) => {
-            const card = document.createElement("div");
-            card.className = `alert-card${type === "firetruck" ? " alert-card--firetruck" : ""}`;
-            const title = document.createElement("p");
-            title.className = "alert-card__title";
-            title.textContent = `${LABEL[type] ?? type} ${id} mendekat`;
-            const dist = document.createElement("p");
-            dist.className = "alert-card__distance";
-            dist.textContent = `${Math.round(distanceM)} m`;
-            card.append(title, dist);
-            return card;
-          })
-        : [emptyCard()]),
-    );
-  }
-
-  function emptyCard() {
-    const p = document.createElement("p");
-    p.className = "empty";
-    p.textContent = "Belum ada kendaraan darurat terdeteksi di sekitar.";
-    return p;
-  }
+  el.sim.addEventListener("change", () => setMe(el.sim.checked ? SIM_POSITION : gpsPos, { newOrigin: true }));
 
   // Messages come from a public broker: check shape before use.
   function onVehicle(msg) {
@@ -84,13 +148,13 @@ export function initCitizen(config) {
       return;
     let v = vehicles.get(msg.vehicleId);
     if (!v) {
-      v = { marker: L.marker([msg.lat, msg.lng]).addTo(map).bindTooltip(`${LABEL[msg.type]} ${msg.vehicleId}`) };
+      v = {};
       vehicles.set(msg.vehicleId, v);
     }
-    v.data = msg;
+    v.msg = msg;
     v.lastSeen = Date.now();
-    v.marker.setLatLng([msg.lat, msg.lng]);
-    renderAlerts();
+    updateDistance(v);
+    render();
   }
 
   connectMqtt(config.mqttWsUrl, `${config.topicPrefix}/vehicle/+`, {
@@ -102,15 +166,16 @@ export function initCitizen(config) {
   });
 
   setInterval(() => {
-    const now = Date.now();
+    const cutoff = Date.now() - config.staleS * 1000;
     let changed = false;
     for (const [id, v] of vehicles) {
-      if (now - v.lastSeen > config.staleS * 1000) {
-        v.marker.remove();
+      if (v.lastSeen < cutoff) {
         vehicles.delete(id);
         changed = true;
       }
     }
-    if (changed) renderAlerts();
+    if (changed) render();
   }, 1000);
+
+  render();
 }

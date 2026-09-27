@@ -39,22 +39,126 @@ body {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
+/* Scoped: a global svg rule would also resize Leaflet's vector overlay. */
+.landing svg,
+.mission svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
 /* --- landing --- */
+/* Faint red/blue glow at the top: emergency-light cue without animating anything. */
+#view-landing {
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 0%, rgb(239 68 68 / 0.16), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 85% 0%, rgb(56 189 248 / 0.14), transparent 70%),
+    var(--bg);
+}
 .landing {
   margin: auto;
-  width: min(360px, 90vw);
+  width: min(400px, 100%);
+  padding: 24px 16px;
   display: grid;
-  gap: 14px;
-  text-align: center;
+  gap: 12px;
 }
-.landing h1 {
-  font-size: 40px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+.brand {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.brand__mark {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--firetruck);
+}
+.brand__mark svg {
+  width: 34px;
+  height: 34px;
+}
+.brand h1 {
+  font: 700 36px var(--font-mono);
+  letter-spacing: 0.18em;
+  padding-left: 0.18em; /* letter-spacing trails the last letter; keeps the word visually centered */
 }
 .landing__sub {
   color: var(--muted);
-  margin-bottom: 16px;
+  font-size: 15px;
+  max-width: 30ch;
+}
+.landing__label {
+  color: var(--muted);
+  font: 600 12px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.landing__foot {
+  margin-top: 16px;
+  text-align: center;
+  color: var(--muted);
+  font: 12px var(--font-mono);
+}
+
+.role {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.role:active {
+  background: var(--surface-2);
+}
+.role:focus-visible {
+  outline: 2px solid var(--ambulance);
+  outline-offset: 2px;
+}
+.role--driver {
+  border-color: rgb(34 197 94 / 0.5);
+  background: linear-gradient(135deg, rgb(34 197 94 / 0.14), var(--surface) 60%);
+}
+.role__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--ambulance);
+  flex-shrink: 0;
+}
+.role--driver .role__icon {
+  background: var(--priority);
+  color: #06210f;
+}
+.role__body {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+.role__body strong {
+  font-size: 17px;
+}
+.role__body span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.role__chevron {
+  color: var(--muted);
 }
 
 .btn {
@@ -124,6 +228,7 @@ body {
    stay visible under the map once #driver-setup gets hidden=true after "Mulai Misi". */
 .panel-form:not([hidden]) {
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* keep wide inputs from stretching the column past the screen */
   gap: 16px;
   padding: 20px;
   overflow-y: auto;
@@ -134,6 +239,72 @@ body {
   font-size: 13px;
   color: var(--muted);
 }
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.form-row > label {
+  min-width: 0; /* grid items default to min-width:auto, which lets the select push the row off-screen */
+}
+.form-row input,
+.form-row select {
+  width: 100%;
+  min-width: 0;
+}
+.mission {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid rgb(34 197 94 / 0.5);
+}
+.panel-form .mission__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font: 600 15px var(--font-ui);
+}
+.mission__label svg {
+  width: 18px;
+  height: 18px;
+  color: var(--priority);
+}
+.panel-form .mission__input {
+  font: 600 22px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.mission__input::placeholder {
+  color: var(--border);
+}
+.mission__hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+.advanced {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.advanced summary {
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.advanced > * + * {
+  margin-top: 14px;
+}
+.form-error {
+  color: var(--danger);
+  font-size: 14px;
+}
+.form-error:empty {
+  display: none;
+}
 .panel-form input,
 .panel-form select {
   padding: 12px;
@@ -143,7 +314,8 @@ body {
   color: var(--text);
   font: 16px var(--font-ui);
 }
-.toggle {
+/* .panel-form prefix: `.panel-form label` (grid) would otherwise win and stack the checkbox above its text. */
+.panel-form .toggle {
   flex-direction: row;
   align-items: center;
   display: flex;
@@ -163,8 +335,7 @@ body {
   flex-direction: column;
   min-height: 0;
 }
-#driver-map,
-#citizen-map {
+#driver-map {
   flex: 1;
   min-height: 0;
   background: var(--bg);
@@ -183,6 +354,9 @@ body {
   display: grid;
   gap: 6px;
 }
+.hud-card .pill {
+  justify-self: start;
+}
 .hud-card__name {
   font-size: 15px;
 }
@@ -195,44 +369,69 @@ body {
   border-radius: 0;
 }
 
-/* --- citizen alerts --- */
-.alerts {
-  padding: 14px 16px;
+/* --- citizen alert --- */
+/* Glanceable from a phone mount: one big state, no map. Danger flashes red/blue like a siren. */
+.citizen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 16px;
+  text-align: center;
+}
+.citizen p:empty {
+  display: none;
+}
+.citizen__arrow {
+  font: 700 clamp(96px, 40vw, 200px) / 1 var(--font-ui);
+}
+.citizen__title {
+  font: 700 clamp(22px, 7vw, 36px) var(--font-ui);
+  letter-spacing: 0.04em;
+}
+.citizen__direction {
+  font: 700 clamp(26px, 9vw, 44px) var(--font-ui);
+}
+.citizen__distance {
+  font: 700 clamp(56px, 22vw, 112px) / 1 var(--font-mono);
+}
+.citizen__detail {
+  color: var(--muted);
+  font-size: 16px;
+}
+.citizen--safe .citizen__arrow {
+  color: var(--priority);
+}
+.citizen--danger {
+  color: #fff;
+  animation: siren 1s steps(1) infinite;
+}
+.citizen--danger .citizen__detail {
+  color: #fff;
+  font: 700 clamp(20px, 6vw, 28px) var(--font-ui);
+  padding: 10px 18px;
+  border: 3px solid #fff;
+  border-radius: 12px;
+}
+/* 2 flashes per second: below the 3/s photosensitivity limit. */
+@keyframes siren {
+  0% {
+    background: #b91c1c;
+  }
+  50% {
+    background: #1e3a8a;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .citizen--danger {
+    animation: none;
+    background: #b91c1c;
+  }
+}
+.citizen__sim {
+  padding: 12px 16px;
   background: var(--surface);
   border-top: 1px solid var(--border);
-  display: grid;
-  gap: 8px;
-  max-height: 40vh;
-  overflow-y: auto;
-}
-.empty {
-  color: var(--muted);
-  font-size: 14px;
-}
-.alert-card {
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-}
-.alert-card__title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font: 600 14px var(--font-ui);
-}
-.alert-card__title::before {
-  content: "";
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--ambulance);
-  flex-shrink: 0;
-}
-.alert-card--firetruck .alert-card__title::before {
-  background: var(--firetruck);
-}
-.alert-card__distance {
-  font: 600 18px var(--font-mono);
-  color: var(--text);
 }

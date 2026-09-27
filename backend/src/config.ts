@@ -20,6 +20,9 @@ export const config = {
   ttlS: numberEnv('TTL_S', 15),
   refreshS: numberEnv('REFRESH_S', 5),
   staleS: numberEnv('STALE_S', 15),
+  // ponytail: static list of mission codes. Production: per-trip tokens issued by Command Center 112 / the referring
+  // hospital, bound to one vehicleId and expiring when the trip ends.
+  missionCodes: new Set((process.env.MISSION_CODES || 'DEMO-112').split(',').map((c) => c.trim()).filter(Boolean)),
 };
 
 /** Signalised intersections on the demo route (OSM highway=traffic_signals). axisA = route road axis. */

@@ -12,6 +12,7 @@ const { values } = parseArgs({
     type: { type: 'string', default: 'ambulance' },
     speed: { type: 'string', default: '60' }, // km/h
     interval: { type: 'string', default: '1000' }, // ms between fixes
+    code: { type: 'string', default: 'DEMO-112' }, // mission code, must be in the server's MISSION_CODES
   },
 });
 const speedKmh = Number(values.speed);
@@ -43,7 +44,7 @@ for (let travelled = 0; ; travelled += stepM) {
   const { pos, heading } = pointAt(travelled);
   const res = await fetch(`${values.url}/api/gps`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${values.code}` },
     body: JSON.stringify({ vehicleId: values.id, type: values.type, lat: pos.lat, lng: pos.lng, speed: speedKmh, heading }),
   });
   const body = (await res.json()) as { nextIntersection?: NextIntersection | null };
