@@ -1,6 +1,6 @@
 import mqtt from "https://cdn.jsdelivr.net/npm/mqtt@5.16.0/dist/mqtt.esm.js";
 
-/** Connects to the shared HiveMQ broker over WSS. `onMessage(topic, msg)` gets parsed JSON only; malformed payloads are dropped. */
+/** Connects to the shared HiveMQ broker over WSS. `topicFilter` may be a string or an array. `onMessage(topic, msg)` gets parsed JSON only; malformed payloads are dropped. */
 export function connectMqtt(wsUrl, topicFilter, { onStatus, onMessage }) {
   const client = mqtt.connect(wsUrl, {
     clientId: `siren-mobile-${Math.random().toString(16).slice(2, 10)}`,

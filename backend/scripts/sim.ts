@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
 import type { NextIntersection } from '../src/contract.ts';
-import { bearingDeg, haversineM, type LatLng } from '../src/geo.ts';
+import { createRoute } from '../src/route.ts';
 
 const { values } = parseArgs({
   options: {
@@ -20,28 +20,14 @@ const intervalMs = Number(values.interval);
 if (!(speedKmh > 0) || !(intervalMs > 0)) throw new Error('--speed and --interval must be positive numbers');
 
 const raw = JSON.parse(readFileSync(new URL('./route.json', import.meta.url), 'utf8')) as [number, number][];
-const route: LatLng[] = raw.map(([lat, lng]) => ({ lat, lng }));
-const cumulative = [0];
-for (let i = 1; i < route.length; i++) cumulative.push(cumulative[i - 1] + haversineM(route[i - 1], route[i]));
-const totalM = cumulative[cumulative.length - 1];
-
-/** Position and heading after travelling `distanceM` along the route (linear interpolation per segment). */
-function pointAt(distanceM: number): { pos: LatLng; heading: number } {
-  const d = Math.min(distanceM, totalM);
-  let i = 1;
-  while (i < route.length - 1 && cumulative[i] < d) i++;
-  const a = route[i - 1];
-  const b = route[i];
-  const segmentM = cumulative[i] - cumulative[i - 1];
-  const t = segmentM > 0 ? (d - cumulative[i - 1]) / segmentM : 1;
-  return { pos: { lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t }, heading: bearingDeg(a, b) };
-}
+const route = createRoute(raw.map(([lat, lng]) => ({ lat, lng })));
+const totalM = route.totalM;
 
 const stepM = (speedKmh / 3.6) * (intervalMs / 1000);
 console.log(`[sim] ${values.id} (${values.type}) ${(totalM / 1000).toFixed(2)} km @ ${speedKmh} km/h -> ${values.url}`);
 
 for (let travelled = 0; ; travelled += stepM) {
-  const { pos, heading } = pointAt(travelled);
+  const { pos, heading } = route.pointAt(travelled);
   const res = await fetch(`${values.url}/api/gps`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${values.code}` },

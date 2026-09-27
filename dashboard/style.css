@@ -29,6 +29,7 @@ body {
 }
 
 .layout {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 400px;
   height: 100vh;
@@ -62,6 +63,11 @@ body {
 .panel__header p {
   color: var(--muted);
   font-size: 14px;
+}
+.panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 h2 {
   font-size: 13px;
@@ -194,6 +200,167 @@ h2 {
   .zone--priority {
     animation: none;
   }
+}
+
+/* --- buttons --- */
+.btn,
+.btn-ghost {
+  font: 600 14px var(--font-ui);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text);
+}
+.btn {
+  padding: 8px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.btn--primary {
+  background: var(--priority);
+  border-color: transparent;
+  color: #06210f;
+}
+.btn--danger {
+  background: transparent;
+  border-color: var(--firetruck);
+  color: var(--firetruck);
+}
+.btn--small {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+.btn-ghost {
+  padding: 4px 10px;
+  white-space: nowrap;
+  background: none;
+  border: 1px solid var(--border);
+}
+.btn:focus-visible,
+.btn-ghost:focus-visible {
+  outline: 2px solid var(--ambulance);
+  outline-offset: 2px;
+}
+
+/* --- panel demo (drawer over the map) --- */
+.demo {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  bottom: 16px;
+  z-index: 1100; /* above Leaflet panes and controls */
+  width: min(360px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.5);
+  overflow-y: auto;
+}
+.demo[hidden] {
+  display: none;
+}
+.demo__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.demo__header h2 {
+  margin: 0;
+}
+#demo-body:not([hidden]) {
+  display: grid;
+  gap: 20px;
+}
+#demo-body section {
+  display: grid;
+  gap: 8px;
+}
+.demo h3 {
+  font-size: 15px;
+}
+.demo__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.demo__row > input,
+.demo__row > select {
+  flex: 1;
+  min-width: 0;
+}
+.demo input[type="text"],
+.demo input[type="password"],
+.demo select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: 14px var(--font-ui);
+}
+.demo__field {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+.demo__field span {
+  display: flex;
+  justify-content: space-between;
+}
+.demo__field output {
+  font: 600 14px var(--font-mono);
+}
+.demo__field input[type="range"] {
+  width: 100%;
+  accent-color: var(--priority);
+}
+.demo__hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+.demo__msg {
+  color: var(--firetruck);
+  font-size: 14px;
+}
+.demo__msg:empty {
+  display: none;
+}
+.demo__runs {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font: 13px var(--font-mono);
+}
+.demo__codes {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font: 600 13px var(--font-mono);
+}
+.chip button {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.chip button:hover {
+  color: var(--firetruck);
 }
 
 .leaflet-container {

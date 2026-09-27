@@ -12,8 +12,8 @@ const SIDE = {
 const MOVING_AWAY_TOLERANCE_M = 2; // GPS noise margin before "moving away" hides the alert
 const BUZZ_PATTERN = [400, 150, 400];
 const BUZZ_EVERY_MS = 3000;
-// On the demo route between S1 and S2, heading toward the hospital like the ambulance (2350 m along route.json).
-const SIM_POSITION = { lat: -8.15914, lng: 113.7098, heading: 35 };
+// Fallback until the retained `demo` topic arrives: on the demo route between S1 and S2, heading toward the hospital.
+const DEFAULT_SIM_POSITION = { lat: -8.15914, lng: 113.7098, heading: 35 };
 
 const el = {
   status: document.getElementById("citizen-status"),
@@ -24,6 +24,7 @@ const el = {
   distance: document.getElementById("citizen-distance"),
   detail: document.getElementById("citizen-detail"),
   sim: document.getElementById("citizen-sim"),
+  source: document.getElementById("citizen-source"),
 };
 
 const formatDistance = (m) => (m >= 1000 ? `${+(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`);
@@ -32,6 +33,7 @@ export function initCitizen(config) {
   /** Citizen position { lat, lng, heading | null }, or null while waiting for GPS. */
   let me = null;
   let gpsPos = null;
+  let demoReceived = false;
   let lastBuzz = 0;
   /** vehicleId -> { msg, distanceM, prevDistanceM, lastSeen } */
   const vehicles = new Map();
@@ -80,7 +82,17 @@ export function initCitizen(config) {
     el.detail.textContent = detail;
   }
 
+  // Which position the distances use: the alert only makes sense if this matches the dot on the dashboard.
+  function renderSource() {
+    if (el.sim.checked)
+      el.source.textContent = demoReceived
+        ? "Posisi: simulasi dari Panel Demo (titik putih di dashboard)"
+        : "Posisi: simulasi bawaan, Panel Demo belum terhubung";
+    else el.source.textContent = gpsPos ? `Posisi: GPS asli (±${gpsPos.accuracyM} m)` : "Posisi: menunggu GPS…";
+  }
+
   function render() {
+    renderSource();
     const threat = [...vehicles.values()]
       .filter((v) => v.distanceM !== undefined && v.distanceM <= config.radiusM && !movingAway(v))
       .sort((a, b) => a.distanceM - b.distanceM)[0];
@@ -122,7 +134,7 @@ export function initCitizen(config) {
     ({ coords }) => {
       // Heading is only meaningful while moving; a parked phone reports NaN or a stale value.
       const heading = Number.isFinite(coords.heading) && coords.speed > 1 ? coords.heading : null;
-      gpsPos = { lat: coords.latitude, lng: coords.longitude, heading };
+      gpsPos = { lat: coords.latitude, lng: coords.longitude, heading, accuracyM: Math.round(coords.accuracy) };
       if (!el.sim.checked) setMe(gpsPos);
     },
     (err) => {
@@ -135,7 +147,20 @@ export function initCitizen(config) {
     { enableHighAccuracy: true, maximumAge: 1000 },
   );
 
-  el.sim.addEventListener("change", () => setMe(el.sim.checked ? SIM_POSITION : gpsPos, { newOrigin: true }));
+  let simPos = DEFAULT_SIM_POSITION;
+  el.sim.addEventListener("change", () => setMe(el.sim.checked ? simPos : gpsPos, { newOrigin: true }));
+
+  // Panel Demo settings (retained). Public broker: check shape before use.
+  function onDemo(msg) {
+    const c = msg?.citizen;
+    if (Number.isFinite(c?.lat) && Number.isFinite(c?.lng) && Number.isFinite(c?.heading)) {
+      simPos = { lat: c.lat, lng: c.lng, heading: c.heading };
+      demoReceived = true;
+    }
+    if (Number.isFinite(msg?.radiusM) && msg.radiusM > 0) config.radiusM = msg.radiusM;
+    if (el.sim.checked) setMe(simPos, { newOrigin: true });
+    else render();
+  }
 
   // Messages come from a public broker: check shape before use.
   function onVehicle(msg) {
@@ -157,12 +182,12 @@ export function initCitizen(config) {
     render();
   }
 
-  connectMqtt(config.mqttWsUrl, `${config.topicPrefix}/vehicle/+`, {
+  connectMqtt(config.mqttWsUrl, [`${config.topicPrefix}/vehicle/+`, `${config.topicPrefix}/demo`], {
     onStatus: (online) => {
       el.status.textContent = online ? "MQTT online" : "MQTT terputus";
       el.status.className = `pill ${online ? "pill--online" : "pill--offline"}`;
     },
-    onMessage: (_topic, msg) => onVehicle(msg),
+    onMessage: (topic, msg) => (topic.endsWith("/demo") ? onDemo(msg) : onVehicle(msg)),
   });
 
   setInterval(() => {

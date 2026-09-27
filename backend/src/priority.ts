@@ -21,9 +21,11 @@ type IntersectionState =
 interface VehicleMemory {
   lastSeen: number;
   distances: Map<string, number>;
-  /** Intersections already passed; cleared once the vehicle leaves their radius. Blocks jitter re-triggers. */
-  passed: Set<string>;
-  /** Every intersection passed on this trip; never cleared, so the HUD never points back at one. */
+  /**
+   * Every intersection passed on this trip; never cleared while the vehicle keeps reporting. Blocks re-triggers from GPS
+   * jitter and from a route that bends back toward a passed intersection, and keeps the HUD from pointing back at one.
+   * ponytail: a trip ends when the vehicle goes stale (new mission); a same-trip return pass needs a new mission.
+   */
   visited: Set<string>;
 }
 
@@ -53,7 +55,7 @@ export class PriorityEngine {
     const { radiusM, passM, passHysteresisM } = this.#opts;
     let vehicle = this.#vehicles.get(gps.vehicleId);
     if (!vehicle) {
-      vehicle = { lastSeen: now, distances: new Map(), passed: new Set(), visited: new Set() };
+      vehicle = { lastSeen: now, distances: new Map(), visited: new Set() };
       this.#vehicles.set(gps.vehicleId, vehicle);
     }
     vehicle.lastSeen = now;
@@ -65,12 +67,11 @@ export class PriorityEngine {
       const d = haversineM(gps, it);
       const prev = vehicle.distances.get(it.id);
       vehicle.distances.set(it.id, d);
-      if (d > radiusM) vehicle.passed.delete(it.id);
 
       const state = this.#state(it.id);
       if (state.mode === 'NORMAL') {
         const approaching = prev !== undefined && d < prev;
-        if (d <= radiusM && approaching && !vehicle.passed.has(it.id)) {
+        if (d <= radiusM && approaching && !vehicle.visited.has(it.id)) {
           const phase = phaseFor(it.axisA, bearingDeg(it, gps));
           const held: IntersectionState = { mode: 'PRIORITY', phase, vehicleId: gps.vehicleId, vehicleType: gps.type, minDistanceM: d };
           commands.push(this.#set(it.id, held, now));
@@ -78,10 +79,7 @@ export class PriorityEngine {
       } else if (state.vehicleId === gps.vehicleId) {
         state.minDistanceM = Math.min(state.minDistanceM, d);
         const passedNow = state.minDistanceM <= passM && d > state.minDistanceM + passHysteresisM;
-        if (passedNow) {
-          vehicle.passed.add(it.id);
-          vehicle.visited.add(it.id);
-        }
+        if (passedNow) vehicle.visited.add(it.id);
         if (passedNow || d > radiusM) commands.push(this.#set(it.id, { mode: 'NORMAL' }, now));
       }
 
@@ -107,6 +105,12 @@ export class PriorityEngine {
       commands.push(this.#vehicles.has(state.vehicleId) ? this.#command(it.id, state, now) : this.#set(it.id, { mode: 'NORMAL' }, now));
     }
     return commands;
+  }
+
+  /** Drops every vehicle and returns all intersections to NORMAL (demo panel reset). */
+  reset(now: number): Command[] {
+    this.#vehicles.clear();
+    return this.#intersections.map((it) => this.#set(it.id, { mode: 'NORMAL' }, now));
   }
 
   #state(id: string): IntersectionState {

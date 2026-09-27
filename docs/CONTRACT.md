@@ -54,7 +54,22 @@ Daftar simpang `[{ id, name, lat, lng, axisA }]` (lihat tabel di bawah).
 
 ### `GET /api/config`
 
-`{ topicPrefix, mqttWsUrl, radiusM, staleS }`. Dipakai dashboard dan Citizen HUD.
+`{ topicPrefix, mqttWsUrl, radiusM, staleS, simSpeedKmh }`. Dipakai dashboard dan Citizen HUD. `radiusM` dan
+`simSpeedKmh` (kecepatan simulasi rute di Driver PWA) bisa berubah dari Panel Demo.
+
+### Panel Demo: `/api/demo` (khusus operator demo)
+
+Semua wajib header `X-Demo-Key` = env `DEMO_KEY`. Env kosong → `403`, kunci salah → `401`.
+
+| Endpoint | Body | Fungsi |
+|---|---|---|
+| `GET /api/demo` | - | status: `codes`, `radiusM`, `citizenAlongM`, `speedKmh`, `routeLengthM`, `stops`, `runs` |
+| `PUT /api/demo` | `{ codes?, radiusM?, citizenAlongM?, speedKmh? }` | ubah pengaturan langsung, lalu publish topic `demo` |
+| `POST /api/demo/run` | `{ type, startM }` | jalankan kendaraan simulasi di server dari `startM` meter sepanjang rute |
+| `POST /api/demo/stop` | - | hentikan semua kendaraan simulasi |
+| `POST /api/demo/reset` | - | stop kendaraan simulasi, semua simpang NORMAL |
+
+Pengaturan ini hanya di memori: restart server = kembali ke default env.
 
 ### Halaman web
 
@@ -83,6 +98,15 @@ Selama kendaraan masih mendekat, backend mengirim ulang `PRIORITY` tiap 5 detik.
 
 Citizen HUD: subscribe `siren-polnes26/vehicle/+`, hitung jarak (Haversine) dari posisi HP sendiri, tampilkan
 peringatan mis. "Ambulans 300 m di belakang" jika < 1 km.
+
+### `siren-polnes26/demo` — backend → Citizen HUD & dashboard (retained)
+
+```json
+{ "citizen": { "lat": -8.1659, "lng": 113.7052, "heading": 35 }, "radiusM": 1000, "simSpeedKmh": 60, "ts": 1789000000000 }
+```
+
+Dikirim saat server start dan tiap kali Panel Demo berubah. Citizen HUD yang mencentang *Posisi simulasi* memakai
+`citizen` sebagai posisinya dan `radiusM` sebagai batas peringatan; dashboard menampilkan titik warga dan radius baru.
 
 ## Aturan ESP32 (Wokwi)
 

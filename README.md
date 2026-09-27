@@ -34,6 +34,23 @@ Buka `http://localhost:3000/mobile/`, lalu pilih peran:
 
 Di HP, buka lewat URL `cloudflared`, karena HTTPS wajib untuk GPS dan untuk install ke home screen. Field *Backend URL* di form Driver bisa diganti kalau backend tidak berada di origin yang sama. PWA punya service worker (network-first), jadi tampilannya tetap terbuka walau WiFi sempat putus.
 
+## Panel Demo (dashboard)
+
+Tombol **Panel Demo** di kanan atas dashboard membuka laci kontrol untuk presentasi. Isi kunci (`DEMO_KEY`), lalu:
+- **Kendaraan simulasi:** atur kecepatan (juga dipakai simulasi rute di HP driver untuk misi baru), pilih jenis dan
+  titik mulai (mis. *Mulai sebelum S1*, tepat di luar radius), lalu **Jalankan**. Tidak perlu HP driver kedua atau terminal.
+- **Posisi warga:** geser di sepanjang rute atau pilih *Setelah S1/S2/S3*. HP warga yang mencentang *Posisi simulasi*
+  langsung pindah ke titik itu, dan titik putih di peta ikut pindah.
+- **Radius prioritas:** ubah radius trigger (mis. 600 m) tanpa restart.
+- **Kode misi:** tambah/hapus kode yang diterima Driver Cockpit.
+- **Reset demo:** hentikan kendaraan simulasi dan kembalikan semua simpang ke NORMAL.
+
+Skenario cepat: radius 600 m, kecepatan 120 km/j, warga *Setelah S1*, kendaraan *Mulai sebelum S1* → lampu S1 hijau
+±3 dtk dan HP warga bergetar ±7 dtk setelah **Jalankan**. Semua pengaturan hilang saat server restart.
+
+Lokal: taruh `DEMO_KEY=...` di `backend/.env`. Saat produksi sedang dipakai, jalankan backend lokal dengan
+`TOPIC_PREFIX` lain (mis. `siren-localtest`), karena topic retained di broker publik dipakai bersama dan akan tertimpa.
+
 ## Deploy (online)
 
 - URL publik: **https://siren.polije.app** (dashboard) dan **https://siren.polije.app/mobile/** (PWA).
@@ -43,10 +60,12 @@ Di HP, buka lewat URL `cloudflared`, karena HTTPS wajib untuk GPS dan untuk inst
 
 Update kode di server: upload hasil `git archive HEAD backend dashboard mobile` ke `~/siren`, lalu jalankan `npm ci --omit=dev` di `~/siren/backend` dan `sudo systemctl restart siren`.
 
+`DEMO_KEY` produksi ada di drop-in `/etc/systemd/system/siren.service.d/demo.conf` (hanya root yang bisa baca). Ganti isinya, lalu `sudo systemctl daemon-reload && sudo systemctl restart siren`.
+
 Hapus setelah proyek selesai:
 1. Hapus DNS record `siren.polije.app` di Cloudflare.
 2. Hapus 2 baris `siren.polije.app` dari `~/cloudflareTunnel/tunnel-config.yml` (ada backup `tunnel-config.yml.bak-siren-*`), lalu jalankan `sudo systemctl restart cloudflared-cliproxy`.
-3. Jalankan `sudo systemctl disable --now siren`, lalu hapus `/etc/systemd/system/siren.service` dan folder `~/siren`.
+3. Jalankan `sudo systemctl disable --now siren`, lalu hapus `/etc/systemd/system/siren.service`, folder `/etc/systemd/system/siren.service.d`, dan folder `~/siren`.
 
 ## Wokwi (`wokwi/`)
 
@@ -71,6 +90,7 @@ Cara menjalankan di wokwi.com:
 | `RADIUS_M` | `1000` | radius trigger prioritas |
 | `PASS_M` / `PASS_HYSTERESIS_M` | `50` / `20` | deteksi "sudah lewat simpang" |
 | `TTL_S` / `REFRESH_S` / `STALE_S` | `15` / `5` / `15` | failsafe ESP32, interval refresh, batas kendaraan hilang |
-| `MISSION_CODES` | `DEMO-112` | kode misi yang diterima, pisahkan dengan koma |
+| `MISSION_CODES` | `DEMO-112` | kode misi awal, pisahkan dengan koma (bisa diubah dari Panel Demo) |
+| `DEMO_KEY` | kosong | kunci Panel Demo; kosong = panel mati |
 
 Akses dari HP (GPS asli): `cloudflared tunnel --url http://localhost:3000` lalu pakai URL `https://…trycloudflare.com` di app.

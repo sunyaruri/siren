@@ -430,6 +430,12 @@ body {
     background: #b91c1c;
   }
 }
+.citizen__source {
+  padding: 0 16px 12px;
+  background: var(--surface);
+  color: var(--muted);
+  font: 12px var(--font-mono);
+}
 .citizen__sim {
   padding: 12px 16px;
   background: var(--surface);

@@ -22,7 +22,10 @@ export const config = {
   staleS: numberEnv('STALE_S', 15),
   // ponytail: static list of mission codes. Production: per-trip tokens issued by Command Center 112 / the referring
   // hospital, bound to one vehicleId and expiring when the trip ends.
-  missionCodes: new Set((process.env.MISSION_CODES || 'DEMO-112').split(',').map((c) => c.trim()).filter(Boolean)),
+  // Stored uppercase: the driver app uppercases what is typed.
+  missionCodes: new Set((process.env.MISSION_CODES || 'DEMO-112').split(',').map((c) => c.trim().toUpperCase()).filter(Boolean)),
+  // Key for the dashboard's Panel Demo (X-Demo-Key header). Empty = panel disabled.
+  demoKey: process.env.DEMO_KEY || '',
 };
 
 /** Signalised intersections on the demo route (OSM highway=traffic_signals). axisA = route road axis. */

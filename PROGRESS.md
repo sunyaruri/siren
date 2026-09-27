@@ -86,6 +86,28 @@ Plan: `docs/superpowers/plans/2026-09-18-siren-backend-dashboard.md`
   URL backend & GPS asli di *Pengaturan lanjutan*. Sekalian fix bawaan: checkbox GPS asli tertumpuk, pill HUD melebar.
   Dicek di Playwright 360 & 390 px: tanpa scroll horizontal; kode salah → pesan error; `DEMO-112` → misi jalan. Cache SW → v5.
 
+### 2026-09-27 — Devan
+
+- Commit `a404810` (Citizen HUD + kode misi + landing) di-push ke `main`.
+- **Panel Demo** di dashboard (dikunci `DEMO_KEY`): kecepatan simulasi, kendaraan simulasi dari server (jenis + titik
+  mulai), posisi warga di sepanjang rute (HP warga mode *Posisi simulasi* ikut via topic retained `demo`), radius live,
+  kode misi live, reset demo. Backend: `route.ts`, `demo.ts`, `demo-api.ts`, `PriorityEngine.reset`, `ingestGps`.
+  Driver PWA membaca `simSpeedKmh` dari `/api/config`. `npm test` 35/35 pass, typecheck bersih.
+- Dicek di Playwright: kunci salah → "Kunci demo salah."; radius 600 m, 120 km/j, warga *Setelah S1*, mulai sebelum S1
+  → S1 PRIORITAS ±2 dtk, HP warga alert "DARI BELAKANG" 7 dtk setelah Jalankan; `/api/config` ikut berubah.
+
+- Laporan: HP warga baru alert setelah ambulans menjauh dari titik putih. Reproduksi dengan kode terbaru (warga S1 − 246 m,
+  radius 1100 m, driver PWA 60 km/j): alert "DARI BELAKANG" dari 978 m sampai 33 m, lalu Aman, jadi logikanya benar.
+  Dugaan: HP memakai posisi lain dari titik putih (halaman lama sebelum deploy memakai titik bawaan antara S1–S2,
+  atau *Posisi simulasi* tidak dicentang sehingga memakai GPS asli). Ditambah baris sumber posisi di Citizen HUD.
+- Catatan: menjalankan backend lokal dengan prefix yang sama menimpa topic retained produksi. Tes lokal pakai
+  `TOPIC_PREFIX=siren-localtest`.
+
+- Bug: dengan radius 850 m, S2 PRIORITAS lagi setelah ambulans lewat S3, karena rute berbelok balik mendekati S2 dan
+  set `passed` sudah dikosongkan saat keluar radius. Fix: guard re-trigger pakai `visited` (seumur trip), `passed` dihapus.
+  Regression test ditambah (36/36 pass). Replay rute demo radius 600/850/1000: tiap simpang PRIORITAS → NORMAL sekali.
+- Kunci Panel Demo produksi diganti jadi yang mudah diketik atas permintaan Devan.
+
 ## Next
 
 - Tes gabungan: backend + `npm run sim` / PWA Driver + Wokwi Irfan, lalu cek LED ikut berubah.

@@ -1,8 +1,13 @@
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { connect } from 'mqtt';
-import { createApp, publishCommands, type Publish } from './app.ts';
+import { createApp, ingestGps, type PublicConfig } from './app.ts';
 import { config, intersections } from './config.ts';
+import { publishDemo, type DemoDeps } from './demo-api.ts';
+import { DemoRunner } from './demo.ts';
 import { PriorityEngine, type Command } from './priority.ts';
+import { publishCommands, type Publish } from './publish.ts';
+import { createRoute } from './route.ts';
 
 const client = connect(config.mqttUrl, {
   clientId: `siren-backend-${Math.random().toString(16).slice(2, 10)}`,
@@ -17,30 +22,50 @@ const publish: Publish = (topic, payload, retain) => {
   client.publish(topic, JSON.stringify(payload), { qos: 0, retain });
 };
 
+// `config` doubles as the engine options, so the Panel Demo's radius change is seen by the engine directly.
 const engine = new PriorityEngine(intersections, config);
 
-// Overwrite any retained PRIORITY left over from a previous run.
+const routePairs = JSON.parse(readFileSync(path.join(import.meta.dirname, '../scripts/route.json'), 'utf8')) as [number, number][];
+const route = createRoute(routePairs.map(([lat, lng]) => ({ lat, lng })));
+const demo: DemoDeps = {
+  key: config.demoKey,
+  runner: new DemoRunner(route),
+  route,
+  // 2350 m along the route = Jl. PB Sudirman between S1 and S2, the Citizen HUD's old fixed demo point.
+  settings: { citizenAlongM: 2350, speedKmh: 60 },
+  engineOpts: config,
+};
+const publicConfig: PublicConfig = {
+  topicPrefix: config.topicPrefix,
+  mqttWsUrl: config.mqttWsUrl,
+  radiusM: config.radiusM,
+  staleS: config.staleS,
+  simSpeedKmh: demo.settings.speedKmh,
+};
+
+// Overwrite any retained PRIORITY left over from a previous run, and any demo settings from another server.
 const reset = intersections.map((it): Command => ({ intersectionId: it.id, cmd: { mode: 'NORMAL', ts: Date.now() } }));
 publishCommands(publish, config.topicPrefix, reset);
+publishDemo(publish, publicConfig, demo, Date.now());
 
 setInterval(() => publishCommands(publish, config.topicPrefix, engine.tick(Date.now())), config.refreshS * 1000);
+setInterval(() => {
+  const now = Date.now();
+  for (const gps of demo.runner.tick(now)) ingestGps(publish, engine, config.topicPrefix, gps, now);
+}, 1000);
 
 const app = createApp({
   engine,
   publish,
   intersections,
   missionCodes: config.missionCodes,
-  publicConfig: {
-    topicPrefix: config.topicPrefix,
-    mqttWsUrl: config.mqttWsUrl,
-    radiusM: config.radiusM,
-    staleS: config.staleS,
-  },
+  demo,
+  publicConfig,
   dashboardDir: path.join(import.meta.dirname, '../../dashboard'),
   mobileDir: path.join(import.meta.dirname, '../../mobile'),
 });
 
 app.listen(config.port, (err) => {
   if (err) throw err;
-  console.log(`[http] SIREN backend on http://localhost:${config.port}`);
+  console.log(`[http] SIREN backend on http://localhost:${config.port}${config.demoKey ? '' : ' (Panel Demo off: set DEMO_KEY)'}`);
 });

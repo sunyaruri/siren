@@ -1,8 +1,8 @@
 import express, { type ErrorRequestHandler, type RequestHandler } from 'express';
-import { parseGps, type Intersection } from './contract.ts';
-import type { Command, PriorityEngine } from './priority.ts';
-
-export type Publish = (topic: string, payload: object, retain: boolean) => void;
+import { parseGps, type GpsInput, type Intersection, type NextIntersection } from './contract.ts';
+import { demoRouter, type DemoDeps } from './demo-api.ts';
+import type { PriorityEngine } from './priority.ts';
+import { publishCommands, type Publish } from './publish.ts';
 
 /** Values the dashboard needs, so prefix/radius are not hardcoded twice. */
 export interface PublicConfig {
@@ -10,6 +10,8 @@ export interface PublicConfig {
   mqttWsUrl: string;
   radiusM: number;
   staleS: number;
+  /** Speed of the driver PWA's route simulator; set from the Panel Demo. */
+  simSpeedKmh: number;
 }
 
 export interface AppDeps {
@@ -18,22 +20,33 @@ export interface AppDeps {
   publicConfig: PublicConfig;
   intersections: Intersection[];
   /** Codes a driver must send as `Authorization: Bearer <code>` before their GPS can trigger priority. */
-  missionCodes: ReadonlySet<string>;
+  missionCodes: Set<string>;
+  /** Panel Demo backend; omitted in tests that do not need it. */
+  demo?: DemoDeps;
   dashboardDir: string;
   mobileDir?: string;
 }
 
-/** Intersection commands are retained so an ESP32 or dashboard gets the current state on (re)connect. */
-export function publishCommands(publish: Publish, topicPrefix: string, commands: Command[]): void {
-  for (const { intersectionId, cmd } of commands) publish(`${topicPrefix}/intersection/${intersectionId}/cmd`, cmd, true);
+/** Shared by POST /api/gps and the server-side demo vehicles. */
+export function ingestGps(
+  publish: Publish,
+  engine: PriorityEngine,
+  topicPrefix: string,
+  gps: GpsInput,
+  now: number,
+): NextIntersection | null {
+  publish(`${topicPrefix}/vehicle/${gps.vehicleId}`, { ...gps, ts: now }, false);
+  const { commands, next } = engine.update(gps, now);
+  publishCommands(publish, topicPrefix, commands);
+  return next;
 }
 
 // ponytail: open CORS, auth is the mission code header, not the origin; restrict origins before any real deployment.
 const cors: RequestHandler = (req, res, next) => {
   res.set({
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'content-type, authorization',
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'content-type, authorization, x-demo-key',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
   });
   if (req.method === 'OPTIONS') {
     res.sendStatus(204);
@@ -57,6 +70,7 @@ export function createApp({
   publicConfig,
   intersections,
   missionCodes,
+  demo,
   dashboardDir,
   mobileDir,
 }: AppDeps): express.Express {
@@ -93,13 +107,11 @@ export function createApp({
       res.status(400).json({ error: 'invalid gps payload', fields: parsed.fields });
       return;
     }
-    const gps = parsed.value;
-    const now = Date.now();
-    publish(`${publicConfig.topicPrefix}/vehicle/${gps.vehicleId}`, { ...gps, ts: now }, false);
-    const { commands, next } = engine.update(gps, now);
-    publishCommands(publish, publicConfig.topicPrefix, commands);
+    const next = ingestGps(publish, engine, publicConfig.topicPrefix, parsed.value, Date.now());
     res.json({ nextIntersection: next });
   });
+
+  if (demo) app.use('/api/demo', demoRouter({ demo, engine, publish, publicConfig, intersections, missionCodes }));
 
   if (mobileDir) app.use('/mobile', express.static(mobileDir));
   // express.static hides dotfiles by default; Android TWA verification needs /.well-known/assetlinks.json.

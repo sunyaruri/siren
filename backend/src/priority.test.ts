@@ -97,3 +97,20 @@ test('next never points back at an intersection already passed on this trip', ()
   drive(engine, [at(-1100), at(-990), at(-30), at(10), at(35), at(1200)]);
   assert.equal(engine.update(fix(at(1150)), 6000).next, null);
 });
+
+test('reset releases held intersections and forgets vehicles', () => {
+  const engine = new PriorityEngine([X], OPTS);
+  drive(engine, [at(-900), at(-800)]);
+  assert.deepEqual(engine.reset(5000), normal(5000));
+  // A forgotten vehicle needs two closing fixes again before it can trigger.
+  assert.deepEqual(engine.update(fix(at(-700)), 6000).commands, []);
+  assert.deepEqual(engine.update(fix(at(-600)), 7000).commands, priority(7000));
+});
+
+test('an intersection passed on this trip does not re-trigger when the route bends back toward it', () => {
+  // Real case: after S3 the demo route turns back toward S2, which it passed earlier (radius 850 m).
+  const engine = new PriorityEngine([X], OPTS);
+  const out = drive(engine, [at(-900), at(-800), at(-30), at(30), at(80), at(600), at(1100), at(900), at(700), at(500)]);
+  assert.deepEqual(out.slice(0, 5).flat(), [...priority(1000), ...normal(4000)]);
+  assert.deepEqual(out.slice(5).flat(), []);
+});

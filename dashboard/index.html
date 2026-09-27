@@ -20,7 +20,10 @@
             <h1>SIREN</h1>
             <p>Command Center · Jember</p>
           </div>
-          <span id="mqtt-status" class="pill pill--offline" role="status">MQTT terputus</span>
+          <div class="panel__actions">
+            <button id="demo-toggle" class="btn-ghost" aria-controls="demo-panel" aria-expanded="false">Panel Demo</button>
+            <span id="mqtt-status" class="pill pill--offline" role="status">MQTT terputus</span>
+          </div>
         </header>
         <section>
           <h2>Simpang</h2>
@@ -34,6 +37,70 @@
           <h2>Log Kejadian</h2>
           <ol id="log" aria-live="polite"></ol>
         </section>
+      </aside>
+
+      <aside id="demo-panel" class="demo" aria-label="Panel Demo" hidden>
+        <header class="demo__header">
+          <h2>Panel Demo</h2>
+          <button id="demo-close" class="btn-ghost" aria-label="Tutup">✕</button>
+        </header>
+        <form id="demo-key-form" class="demo__row">
+          <input id="demo-key" type="password" placeholder="Kunci demo" autocomplete="current-password" required />
+          <button class="btn">Buka</button>
+        </form>
+        <p id="demo-msg" class="demo__msg" role="alert"></p>
+
+        <div id="demo-body" hidden>
+          <section>
+            <h3>Kendaraan simulasi</h3>
+            <label class="demo__field">
+              <span>Kecepatan <output id="demo-speed-out"></output></span>
+              <input id="demo-speed" type="range" min="20" max="200" step="10" />
+            </label>
+            <p class="demo__hint">Juga dipakai simulasi rute di HP driver (untuk misi yang baru dimulai).</p>
+            <div class="demo__row">
+              <select id="demo-type" aria-label="Jenis kendaraan">
+                <option value="ambulance">Ambulans</option>
+                <option value="firetruck">Pemadam</option>
+              </select>
+              <select id="demo-start" aria-label="Mulai dari"></select>
+            </div>
+            <div class="demo__row">
+              <button id="demo-run" class="btn btn--primary">Jalankan</button>
+              <button id="demo-stop" class="btn">Stop semua</button>
+            </div>
+            <ul id="demo-runs" class="demo__runs"></ul>
+          </section>
+
+          <section>
+            <h3>Posisi warga</h3>
+            <label class="demo__field">
+              <span>Di rute <output id="demo-citizen-out"></output></span>
+              <input id="demo-citizen" type="range" min="0" step="10" />
+            </label>
+            <div id="demo-citizen-presets" class="demo__row"></div>
+            <p class="demo__hint">Berlaku untuk HP warga yang mencentang “Posisi simulasi”.</p>
+          </section>
+
+          <section>
+            <h3>Radius prioritas</h3>
+            <label class="demo__field">
+              <span>Radius <output id="demo-radius-out"></output></span>
+              <input id="demo-radius" type="range" min="200" max="1500" step="50" />
+            </label>
+          </section>
+
+          <section>
+            <h3>Kode misi</h3>
+            <ul id="demo-codes" class="demo__codes"></ul>
+            <form id="demo-code-form" class="demo__row">
+              <input id="demo-code" type="text" placeholder="AMB-JBR-07" maxlength="64" pattern="[A-Za-z0-9_\-]{1,64}" required />
+              <button class="btn">Tambah</button>
+            </form>
+          </section>
+
+          <button id="demo-reset" class="btn btn--danger">Reset demo</button>
+        </div>
       </aside>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>

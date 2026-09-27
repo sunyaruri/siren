@@ -1,7 +1,7 @@
 import { haversineM } from "./mqtt-client.js";
 
 const L = window.L;
-const SIM_SPEED_KMH = 60;
+const DEFAULT_SIM_SPEED_KMH = 60;
 
 const el = {
   status: document.getElementById("driver-status"),
@@ -123,7 +123,10 @@ export function initDriver({ getJson }) {
     el.status.className = "pill pill--online";
 
     const route = useRealGps ? null : await getJson("data/route.json");
-    const source = useRealGps ? makeGpsSource() : makeRouteSimulator(route, SIM_SPEED_KMH);
+    // The Panel Demo on the dashboard can speed the simulator up so a demo run does not take 4 minutes.
+    const config = await getJson(`${backendUrl}/api/config`).catch(() => ({}));
+    const simSpeedKmh = config.simSpeedKmh ?? DEFAULT_SIM_SPEED_KMH;
+    const source = useRealGps ? makeGpsSource() : makeRouteSimulator(route, simSpeedKmh);
     if (useRealGps) gpsSource = source;
 
     const mapEl = document.getElementById("driver-map");
@@ -143,7 +146,7 @@ export function initDriver({ getJson }) {
     let lastPos = null;
 
     tickHandle = setInterval(async () => {
-      const reading = useRealGps ? source.next() : { pos: source.next(1), speedKmh: SIM_SPEED_KMH, headingDeg: null };
+      const reading = useRealGps ? source.next() : { pos: source.next(1), speedKmh: simSpeedKmh, headingDeg: null };
       if (!reading?.pos) return;
       const [lat, lng] = reading.pos;
 

@@ -1,4 +1,5 @@
 import mqtt from "https://cdn.jsdelivr.net/npm/mqtt@5.16.0/dist/mqtt.esm.js";
+import { initDemoPanel } from "./demo-panel.js";
 
 const L = window.L;
 const LABEL = { ambulance: "Ambulans", firetruck: "Pemadam" };
@@ -85,6 +86,14 @@ map.fitBounds(bounds, { padding: [20, 20] });
 
 /** id -> { marker, trail, data, lastSeen } */
 const vehicles = new Map();
+
+// Where Citizen HUDs in "Posisi simulasi" mode are, as set from the Panel Demo.
+const citizenMarker = L.circleMarker([0, 0], {
+  radius: 7,
+  color: token("--text"),
+  fillColor: token("--text"),
+  fillOpacity: 1,
+}).bindTooltip("Warga (posisi simulasi)");
 
 // --- panel -----------------------------------------------------------------
 function card(title, pillText, pillClass, sub) {
@@ -229,6 +238,19 @@ function onVehicle(msg) {
   renderVehicles();
 }
 
+// Panel Demo settings (retained topic). Public broker: check shape before use.
+function onDemo(msg) {
+  const c = msg?.citizen;
+  if (Number.isFinite(c?.lat) && Number.isFinite(c?.lng)) {
+    citizenMarker.setLatLng([c.lat, c.lng]).addTo(map);
+  }
+  if (Number.isFinite(msg?.radiusM) && msg.radiusM > 0 && msg.radiusM !== config.radiusM) {
+    config.radiusM = msg.radiusM;
+    for (const j of junctions.values()) j.zone.setRadius(msg.radiusM);
+    log(`Radius prioritas → ${msg.radiusM} m`);
+  }
+}
+
 // Display failsafe mirrors the ESP32: PRIORITY without refresh expires; silent vehicles disappear.
 setInterval(() => {
   const now = Date.now();
@@ -273,6 +295,16 @@ client.on("message", (topic, payload) => {
     .split("/");
   if (kind === "vehicle") onVehicle(msg);
   else if (kind === "intersection" && leaf === "cmd") onCmd(id, msg);
+  else if (kind === "demo") onDemo(msg);
+});
+
+// The drawer covers the left of the map, so shift the view right while it is open.
+initDemoPanel({
+  onToggle: (open) =>
+    map.fitBounds(bounds, {
+      paddingTopLeft: [open ? 392 : 20, 20],
+      paddingBottomRight: [20, 20],
+    }),
 });
 
 renderJunctions();
