@@ -122,8 +122,18 @@ Plan: `docs/superpowers/plans/2026-09-18-siren-backend-dashboard.md`
   `npm test` 40/40. Dicek di Playwright: jeda → HP warga beku di 878 m selama 5 dtk dan S1 tetap PRIORITAS; lanjutkan →
   801 m; reset → kendaraan di 0,00 km, semua NORMAL; hapus → ikon hilang.
 
+### 2026-10-01: Irfan
+
+- Tes gabungan (dilakukan 2026-09-23, baru dicatat): backend lokal + `npm run sim` 60 km/j + Wokwi di VS Code
+  (firmware `wokwi/`, `INTERSECTION_ID` S1) + dashboard. Saat ambulans masuk radius (±926 m dari S1), dashboard
+  S1 PRIORITAS fase A, LED fase A hijau ditahan, Serial `[fsm] -> PRIORITY phase=A ttl=15s` dan failsafe disegarkan
+  tiap ±5 dtk selama mendekat, lalu `[fsm] -> NORMAL` setelah lewat. Log dashboard: S1, S2, S3 masing-masing
+  PRIORITAS lalu NORMAL. Run headless `wokwi-cli` dengan sim 300 km/j memberi hasil sama.
+- Catatan: tes ini sebelum kode misi (27 Sep). Belum diulang dengan backend terbaru (`npm run sim` sekarang pakai
+  `--code`, default `DEMO-112`).
+
 ## Next
 
-- Tes gabungan: backend + `npm run sim` / PWA Driver + Wokwi Irfan, lalu cek LED ikut berubah.
+- Ulang tes gabungan dengan backend terbaru (kode misi, Panel Demo) + Wokwi.
 - Tes GPS asli dari HP lewat `cloudflared`, lalu tuning `RADIUS_M`/`PASS_M` bila perlu.
 - Tahap Final: prioritas multi-vehicle, analytics, telemetry lampu dari ESP32, display countdown (TM1637).
