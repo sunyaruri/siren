@@ -1,7 +1,11 @@
-import { haversineM } from "./mqtt-client.js";
+import { formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106i";
 
 const L = window.L;
 const DEFAULT_SIM_SPEED_KMH = 60;
+// ETA threshold for green, from /api/config (`etaLeadS`); the backend default until the config arrives.
+let etaLeadS = 40;
+const VEHICLE_ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 const el = {
   status: document.getElementById("driver-status"),
@@ -10,15 +14,33 @@ const el = {
   missionCode: document.getElementById("mission-code"),
   error: document.getElementById("driver-error"),
   vehicleId: document.getElementById("vehicle-id"),
+  vehicleIdError: document.getElementById("vehicle-id-error"),
   vehicleType: document.getElementById("vehicle-type"),
   gpsToggle: document.getElementById("gps-toggle"),
-  backendUrl: document.getElementById("backend-url"),
   btnStart: document.getElementById("btn-start"),
   btnStop: document.getElementById("btn-stop"),
-  hudMode: document.getElementById("hud-mode"),
+  hud: document.getElementById("hud-card"),
+  hudState: document.getElementById("hud-state"),
+  hudEtaLabel: document.getElementById("hud-eta-label"),
+  hudEta: document.getElementById("hud-eta"),
   hudName: document.getElementById("hud-name"),
   hudDistance: document.getElementById("hud-distance"),
+  hudHint: document.getElementById("hud-hint"),
 };
+
+/** Shows `message` under `input` (or clears it) and marks the field invalid for screen readers. */
+function fieldError(input, errorEl, message) {
+  errorEl.textContent = message;
+  if (message) input.setAttribute("aria-invalid", "true");
+  else input.removeAttribute("aria-invalid");
+}
+
+function setStarting(starting) {
+  el.btnStart.disabled = starting;
+  el.btnStart.classList.toggle("is-loading", starting);
+  el.btnStart.setAttribute("aria-busy", String(starting));
+  el.btnStart.textContent = starting ? "Memeriksa kode…" : "Mulai Misi";
+}
 
 /** Walks route.json at a fixed speed, interpolating between points so movement stays smooth at 1 Hz. */
 function makeRouteSimulator(route, speedKmh) {
@@ -81,7 +103,7 @@ async function checkMission(backendUrl, headers) {
     if (res.ok) return null;
     return res.status === 401 ? "Kode misi tidak valid atau sudah tidak berlaku." : `Backend menolak (HTTP ${res.status}).`;
   } catch {
-    return "Backend tidak bisa dihubungi. Cek URL Backend di Pengaturan lanjutan.";
+    return "Server tidak bisa dihubungi. Periksa koneksi internet, lalu coba lagi.";
   }
 }
 
@@ -92,23 +114,28 @@ export function initDriver({ getJson }) {
   let tickHandle;
   let gpsSource;
   let missionStarted = false;
+  let stopped = false;
   let endMission = null;
 
   el.setup.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (missionStarted) return; // guards against a double-tap firing two submits before the form hides
     const vehicleId = el.vehicleId.value.trim();
-    if (!/^[A-Za-z0-9_-]{1,32}$/.test(vehicleId)) {
-      el.vehicleId.focus();
-      return;
-    }
+    const code = el.missionCode.value.trim();
+    fieldError(el.missionCode, el.error, code ? "" : "Masukkan Kode Misi dari Command Center 112.");
+    fieldError(
+      el.vehicleId,
+      el.vehicleIdError,
+      VEHICLE_ID_RE.test(vehicleId) ? "" : "Isi ID Kendaraan: huruf, angka, - atau _ (maks. 32).",
+    );
+    if (!code) return el.missionCode.focus();
+    if (!VEHICLE_ID_RE.test(vehicleId)) return el.vehicleId.focus();
     missionStarted = true;
-    el.btnStart.disabled = true;
-    el.error.textContent = "";
+    setStarting(true);
     const type = el.vehicleType.value;
-    const backendUrl = el.backendUrl.value.trim() || window.location.origin;
+    const backendUrl = window.location.origin; // the PWA is always served by the backend it talks to
     const useRealGps = el.gpsToggle.checked;
-    const auth = { authorization: `Bearer ${el.missionCode.value.trim().toUpperCase()}` };
+    const auth = { authorization: `Bearer ${code.toUpperCase()}` };
     // Releases held lights and clears this vehicle from the dashboard/Citizen HUDs now, not after the stale timeout.
     endMission = () =>
       fetch(`${backendUrl}/api/mission/end`, {
@@ -119,9 +146,10 @@ export function initDriver({ getJson }) {
 
     const problem = await checkMission(backendUrl, auth);
     if (problem) {
-      el.error.textContent = problem;
+      fieldError(el.missionCode, el.error, problem);
+      el.missionCode.focus();
       missionStarted = false;
-      el.btnStart.disabled = false;
+      setStarting(false);
       return;
     }
 
@@ -134,20 +162,23 @@ export function initDriver({ getJson }) {
     // The Panel Demo on the dashboard can speed the simulator up so a demo run does not take 4 minutes.
     const config = await getJson(`${backendUrl}/api/config`).catch(() => ({}));
     const simSpeedKmh = config.simSpeedKmh ?? DEFAULT_SIM_SPEED_KMH;
+    if (Number.isFinite(config.etaLeadS)) etaLeadS = config.etaLeadS;
     const source = useRealGps ? makeGpsSource() : makeRouteSimulator(route, simSpeedKmh);
     if (useRealGps) gpsSource = source;
 
     const mapEl = document.getElementById("driver-map");
     if (mapEl._leaflet_id) mapEl._leaflet_id = null; // defensive: survives initDriver() being invoked twice (e.g. bfcache restore)
     map = L.map("driver-map", { zoomControl: false });
-    L.control.zoom({ position: "bottomleft" }).addTo(map);
+    // Top right, under the topbar: the bottom corners sit behind the floating HUD sheet.
+    map.attributionControl.setPosition("topright");
+    L.control.zoom({ position: "topright" }).addTo(map);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       className: "map-tiles",
       attribution: "&copy; OpenStreetMap contributors",
     }).addTo(map);
-    trail = L.polyline([], { color: "#22c55e", weight: 4 }).addTo(map);
-    marker = L.circleMarker([0, 0], { radius: 8, color: "#22c55e", fillOpacity: 1 });
+    trail = L.polyline([], { color: "#248a3d", weight: 4 }).addTo(map); // --priority
+    marker = L.circleMarker([0, 0], { radius: 8, color: "#ffffff", weight: 3, fillColor: "#0066cc", fillOpacity: 1 });
 
     let started = false;
     let heading = 0;
@@ -173,7 +204,7 @@ export function initDriver({ getJson }) {
         started = true;
       } else {
         marker.setLatLng([lat, lng]);
-        map.panTo([lat, lng], { animate: true });
+        map.panTo([lat, lng], { animate: !reducedMotion.matches });
       }
       trail.addLatLng([lat, lng]);
 
@@ -194,7 +225,7 @@ export function initDriver({ getJson }) {
           const body = await res.json();
           applyHud(body.nextIntersection);
         } else if (res.status === 401) {
-          stop("Kode ditolak"); // code revoked mid-mission: stop sending, lights fall back via ttl
+          stop("Kode ditolak", "Kode misi ditolak"); // code revoked mid-mission: stop sending, lights fall back via ttl
         }
       } catch (err) {
         console.error("[gps post]", err.message);
@@ -204,28 +235,58 @@ export function initDriver({ getJson }) {
     }, 1000);
   });
 
-  function applyHud(next) {
-    if (!next) {
-      el.hudMode.textContent = "NORMAL";
-      el.hudMode.className = "pill";
-      el.hudName.textContent = "Belum ada simpang terdekat";
-      el.hudDistance.textContent = "—";
-      return;
-    }
-    const isPriority = next.mode === "PRIORITY";
-    el.hudMode.textContent = isPriority ? "PRIORITAS" : "NORMAL";
-    el.hudMode.className = `pill ${isPriority ? "pill--priority" : ""}`;
-    el.hudName.textContent = next.name;
-    el.hudDistance.textContent = `${Math.round(next.distanceM)} m`;
+  function showHud(state, { status, etaLabel = "", eta = "", name = "", distance = "", hint }) {
+    el.hud.dataset.state = state;
+    setText(el.hudState, status); // live region: only re-announced when the text actually changes
+    el.hudEtaLabel.textContent = etaLabel;
+    el.hudEta.textContent = eta;
+    el.hudName.textContent = name;
+    el.hudDistance.textContent = distance;
+    el.hudHint.textContent = hint;
   }
 
-  function stop(reason = "Selesai") {
-    clearInterval(tickHandle);
-    gpsSource?.stop();
-    endMission?.();
-    endMission = null;
-    el.status.textContent = reason;
-    el.status.className = "pill pill--offline";
+  // Plain-language HUD: the engine's NORMAL/PRIORITY becomes "waiting" vs "green for you".
+  function applyHud(next) {
+    if (stopped) return; // a request still in flight when the mission ended
+    if (!next) {
+      showHud("idle", {
+        status: "Tidak ada simpang di depan",
+        hint: "Lampu simpang berjalan normal. Perkiraan tiba muncul saat Anda mendekati simpang.",
+      });
+      return;
+    }
+    const green = next.mode === "PRIORITY";
+    const hasEta = Number.isFinite(next.etaS);
+    showHud(green ? "green" : "wait", {
+      status: green ? "Lampu hijau untuk Anda" : "Menunggu lampu hijau",
+      // Small label + big value: the value alone stays on one line even on a 320px phone.
+      etaLabel: hasEta ? `Perkiraan AI · tiba di ${next.id} dalam` : "Simpang berikutnya",
+      eta: hasEta ? formatEta(next.etaS) : next.id,
+      name: next.name,
+      distance: `${Math.round(next.distanceM)} m lagi`,
+      hint: green
+        ? `${next.id} tetap hijau sampai Anda melewatinya.`
+        : etaLeadS > 0
+          ? `Dibuka otomatis saat perkiraan tiba ≤ ${etaLeadS} dtk.`
+          : "Dibuka otomatis saat Anda masuk radius simpang.",
+    });
+  }
+
+  function stop(reason = "Selesai", status = "Misi selesai") {
+    if (!stopped) {
+      clearInterval(tickHandle);
+      gpsSource?.stop();
+      endMission?.();
+      endMission = null;
+      stopped = true;
+      el.status.textContent = reason;
+      el.status.className = "pill pill--offline";
+      showHud("ended", { status, hint: "Lampu simpang kembali ke siklus normal." });
+      el.btnStop.textContent = "Kembali ke menu";
+      el.btnStop.className = "btn btn--secondary";
+      return;
+    }
+    window.location.reload(); // second tap: back to the landing, same as the topbar back button
   }
 
   el.btnStop.addEventListener("click", () => stop());

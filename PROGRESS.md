@@ -132,8 +132,72 @@ Plan: `docs/superpowers/plans/2026-09-18-siren-backend-dashboard.md`
 - Catatan: tes ini sebelum kode misi (27 Sep). Belum diulang dengan backend terbaru (`npm run sim` sekarang pakai
   `--code`, default `DEMO-112`).
 
+- Commit `8ce4419` di-push. **Wokwi S1–S3** (dikerjakan tanpa menunggu Irfan, atas permintaan Devan): satu ESP32 memegang
+  tiga simpang (18 LED + label `wokwi-text`), state machine per simpang, subscribe `intersection/+/cmd`, siklus NORMAL
+  dibuat tidak serempak. Compile `arduino-cli` bersih (69% flash). Dites di wokwi.com dengan firmware uji ber-prefix
+  `siren-localtest` + backend lokal + ambulans simulasi 200 km/j: S1 PRIORITAS A → NORMAL → S2 PRIORITAS → S3 PRIORITAS
+  → S2 NORMAL → S3 NORMAL, LED ikut (screenshot).
+
+- Masukan Devan: setelah ambulans lewat S1, fase A tetap hijau ±10 dtk (siklus NORMAL mulai lagi dari "A hijau").
+  Fix: keluar dari PRIORITY, jalur yang ditahan langsung kuning lalu jalur lawan hijau. Sekalian reconnect MQTT dibuat
+  non-blocking; sebelumnya semua lampu membeku selama reconnect (terlihat di tes). Dicek di Wokwi dengan membaca status
+  LED: S1 A hijau (prioritas) → A kuning saat NORMAL → B hijau 3 dtk kemudian; S2 dan S3 sama; lampu tetap jalan saat
+  reconnect.
+
+- Bug: ambulans simulasi yang sampai tujuan hilang dari daftar Panel Demo, jadi Reset tidak bisa memutarnya ulang, dan
+  ikonnya diam ±15 dtk di tujuan. Sekarang saat sampai tujuan: langsung selesai misi (ikon hilang, lampu dilepas), tetap
+  di daftar sebagai "sampai tujuan"; Reset mengembalikannya ke titik mulai (dijeda) lalu Lanjutkan. `npm test` 41/41.
+  Dicek di Playwright: sampai tujuan → ikon 0, tombol Jeda nonaktif; Reset → kembali 2,46 km dijeda; Lanjutkan → jalan.
+
+- 2026-10-31 — Deploy ulang ke `siren.polije.app`. Service `siren` dan `~/siren` sudah terhapus dan tunnel lama
+  `cloudflared-cliproxy` mati (530), jadi dipasang ulang: kode working tree terbaru, `DEMO_KEY` baru, dan tunnel
+  Cloudflare khusus `siren` (service `cloudflared-siren`) dengan CNAME dipindah ke tunnel itu. Dicek: `/`, `/api/config`,
+  `/mobile/`, `/.well-known/assetlinks.json` 200; `POST /api/gps` tanpa kode 401.
+
+- 2026-11-06 — Fitur AI: **prediksi ETA** (Predictive Green Wave). Model regresi ridge (`backend/src/eta.ts`) memprediksi
+  detik sampai tiba di simpang dari riwayat kecepatan; lampu hijau dibuka saat di dalam radius, mendekat, dan prediksi
+  ETA ≤ `ETA_LEAD_S` (default 40). Dilatih dengan `npm run train:eta` dari 400 perjalanan sintetis di rute demo: MAE
+  17,7 dtk vs 30,7 dtk cara naif (jarak ÷ kecepatan). `etaS` ikut di `nextIntersection` dan payload `vehicle/{id}`;
+  dashboard menampilkan "ETA S1: 27 dtk" dan log "prediksi AI: tiba 39 dtk". Bug yang ketemu saat tes: dua fix
+  berjarak milidetik membuat fitur percepatan meledak (ETA 0); kini percepatan butuh ≥ 1 dtk riwayat dan dibatasi
+  ±5 m/s². `npm test` 48/48, dicek di browser (lokal): S1 PRIORITAS saat prediksi 39 dtk.
+
+- 2026-11-06 — UI/UX untuk juri (panduan skill ui-ux-pro-max). Dashboard: panel *Cara kerja* 3 langkah yang menyala
+  live, kartu *Kendaraan & prediksi AI* (ETA besar + bar menuju ambang `etaLeadS` + status awam), label S1–S3 dan
+  legenda di peta, bahasa awam (jalur utama/silang, siklus normal, Live), empty state dengan tombol *Mulai demo*.
+  PWA: HUD driver (status lampu, "Tiba di S1 dalam 24 dtk"), error form di dekat field, kode uji coba DEMO-112 terlihat,
+  layar warga menjelaskan cara uji, kontras/fokus/target sentuh. `GET /api/config` kini berisi `etaLeadS`.
+  Ketemu saat deploy: Cloudflare memaksa `max-age=14400` pada JS/CSS sehingga browser memuat HTML baru dengan modul
+  lama (tampilan rusak). Fix: `?v=20261106` di semua aset & import, SW fetch `cache: no-cache`, static `no-cache`.
+  `npm test` 49/49; dicek di browser (lokal & produksi, termasuk browser dengan cache lama).
+
+- 2026-11-06 — Tema warna "Rambu Jalan" (terang) untuk dashboard + PWA, menggantikan navy + hijau neon yang terasa
+  generik: kertas krem, tinta hitam, hijau rambu untuk brand dan lampu hijau, kuning hanya untuk "menunggu", merah untuk
+  pemadam/error, biru rambu untuk ambulans, tanpa glow; header dashboard berbentuk pelat rambu; peta tile OSM terang.
+  Dua bug ketemu saat cek di browser: (1) HUD driver menulis "Lampu hijau untuk Anda" padahal simpang dipegang ambulans
+  lain; `nextIntersection.mode` kini dari sudut pandang kendaraan itu (+ tes regresi). (2) Log dashboard kadang
+  "tiba 41 dtk" padahal ambang 40, karena broker publik tidak menjaga urutan antar-topic; PRIORITY kini membawa `etaS`
+  saat dipicu AI. `npm test` 49/49; dicek di browser: dashboard menunggu/hijau, HUD driver dua kendaraan, alert warga.
+
+- 2026-11-06 — Landing page untuk juri (`landing/`, tampil di `/`; dashboard pindah ke `/dashboard/`). Dibuat dengan
+  5 agent: riset produk sejenis (Miovision Opticom, LYT, HAAS Alert, Applied Information, RapidSOS, berita Suwon),
+  riset desain (rambu PM 13/2014, Kinneir & Calvert, GOV.UK type scale, skill ui-ux-pro-max), copy dari repo + concept
+  paper, builder, dan reviewer (QA visual + cek fakta tiap klaim ke kode/paper). Isi: hero dengan animasi SVG simpang
+  (pause + reduced-motion), angka sistem, masalah (sitasi paper), cara kerja, AI + tabel MAE, empat bagian dengan
+  screenshot asli, keamanan, coba demo (DEMO-112, tanpa kunci Panel Demo), tim. Tanpa JS tetap terbaca; 320 px tanpa
+  scroll horizontal. Catatan: paper menulis Suwon −56% (dikutip ke Seoul Economic Daily 2026), sedangkan artikel itu
+  menyebut −63,5%; perlu disamakan.
+
+- 2026-11-06 — Tampilan "Liquid Glass" terang untuk landing, dashboard dan PWA (tema rambu terasa kartun): peta penuh
+  sebagai kanvas, panel kaca mengambang (blur + fallback solid), Inter saja, tombol pill. Landing dibuat bergaya produk:
+  tanpa jejak lomba/tim, nav 4 item, satu container 1200 px, sitasi jadi catatan sumber. PWA: layar awal ala aplikasi
+  native, kolom di tengah pada layar lebar, ETA HUD satu baris. Dashboard: zoom pecahan agar rute pas, legenda tidak
+  menutupi rute. Demo tanpa kunci: `POST /api/demo/quick-run` (tombol *Mulai demo*), maks. 3 kendaraan simulasi,
+  pengaturan lanjutan tetap berkunci. `npm test` 50/50; dicek di browser (1440, 1280, 390).
+
 ## Next
 
+- Simpan `sketch.ino` + `diagram.json` terbaru ke proyek Wokwi online (link untuk demo/video).
 - Ulang tes gabungan dengan backend terbaru (kode misi, Panel Demo) + Wokwi.
 - Tes GPS asli dari HP lewat `cloudflared`, lalu tuning `RADIUS_M`/`PASS_M` bila perlu.
 - Tahap Final: prioritas multi-vehicle, analytics, telemetry lampu dari ESP32, display countdown (TM1637).

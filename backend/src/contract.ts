@@ -22,13 +22,25 @@ export interface Intersection {
 
 export type CmdPayload =
   | { mode: 'NORMAL'; ts: number }
-  | { mode: 'PRIORITY'; phase: Phase; vehicleId: string; vehicleType: VehicleType; ttl: number; ts: number };
+  | {
+      mode: 'PRIORITY';
+      phase: Phase;
+      vehicleId: string;
+      vehicleType: VehicleType;
+      ttl: number;
+      ts: number;
+      /** Present when the ETA model triggered it: the predicted seconds to arrival at that moment. */
+      etaS?: number;
+    };
 
 export interface NextIntersection {
   id: string;
   name: string;
   distanceM: number;
+  /** PRIORITY only when the intersection is held for this vehicle (not when another vehicle holds it). */
   mode: Mode;
+  /** Predicted seconds until the vehicle reaches it (ETA model, src/eta.ts). */
+  etaS: number;
 }
 
 export type GpsParseResult = { ok: true; value: GpsInput } | { ok: false; fields: string[] };

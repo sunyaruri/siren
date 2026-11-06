@@ -1,5 +1,5 @@
-import { initDriver } from "./driver.js";
-import { initCitizen } from "./citizen.js";
+import { initDriver } from "./driver.js?v=20261106i";
+import { initCitizen } from "./citizen.js?v=20261106i";
 
 const views = {
   landing: document.getElementById("view-landing"),
@@ -17,13 +17,6 @@ async function getJson(url) {
   return res.json();
 }
 
-/** Same origin as this page by default; overridable in the Driver form for cloudflared tunnels. */
-function defaultBackendUrl() {
-  return window.location.origin;
-}
-
-document.getElementById("backend-url").value = defaultBackendUrl();
-
 let roleChosen = false; // a double-tap on a landing button would otherwise init the same Leaflet map twice
 
 document.getElementById("btn-driver").addEventListener("click", () => {
@@ -37,8 +30,7 @@ document.getElementById("btn-citizen").addEventListener("click", async () => {
   if (roleChosen) return;
   roleChosen = true;
   show("citizen");
-  const backendUrl = defaultBackendUrl();
-  const config = await getJson(`${backendUrl}/api/config`);
+  const config = await getJson(`${window.location.origin}/api/config`);
   initCitizen(config);
 });
 

@@ -48,10 +48,12 @@ Kirim tiap 1 detik selama misi aktif. Berhenti kirim = misi selesai (backend mel
 Respons `200` (untuk Driver HUD):
 
 ```json
-{ "nextIntersection": { "id": "S1", "name": "Simpang PB Sudirman – Bedadung – Anggrek", "distanceM": 450, "mode": "PRIORITY" } }
+{ "nextIntersection": { "id": "S1", "name": "Simpang PB Sudirman – Bedadung – Anggrek", "distanceM": 450, "mode": "PRIORITY", "etaS": 31 } }
 ```
 
-`nextIntersection` = simpang terdekat yang sedang didekati; `null` jika tidak ada.
+`nextIntersection` = simpang terdekat yang sedang didekati; `null` jika tidak ada. `mode` dilihat dari kendaraan ini:
+`PRIORITY` hanya jika lampu hijau dipegang untuk kendaraan ini; dipegang kendaraan lain = `NORMAL` (tunggu). `etaS` = prediksi detik sampai tiba
+di simpang itu (model AI ETA, lihat README → Prediksi ETA).
 Respons `400`: `{ "error": "invalid gps payload", "fields": ["type"] }`. Respons `401`: kode misi tidak valid (lihat atas).
 
 ### `GET /api/route`
@@ -65,12 +67,16 @@ Daftar simpang `[{ id, name, lat, lng, axisA }]` (lihat tabel di bawah).
 
 ### `GET /api/config`
 
-`{ topicPrefix, mqttWsUrl, radiusM, staleS, simSpeedKmh }`. Dipakai dashboard dan Citizen HUD. `radiusM` dan
+`{ topicPrefix, mqttWsUrl, radiusM, staleS, simSpeedKmh, etaLeadS }`. Dipakai dashboard dan Citizen HUD. `etaLeadS` =
+ambang prediksi ETA (detik) untuk membuka lampu hijau; `0` = pemicu radius saja. `radiusM` dan
 `simSpeedKmh` (kecepatan simulasi rute di Driver PWA) bisa berubah dari Panel Demo.
 
 ### Panel Demo: `/api/demo` (khusus operator demo)
 
 Semua wajib header `X-Demo-Key` = env `DEMO_KEY`. Env kosong → `403`, kunci salah → `401`.
+Kecuali `POST /api/demo/quick-run` (tanpa kunci, untuk tombol *Mulai demo* di dashboard): menjalankan satu ambulans
+simulasi di dalam zona S1 (0,75 × radius sebelum simpang). Maksimal 3 kendaraan simulasi sekaligus; lebih dari itu
+→ `429`. Respons `201 { vehicleId }`. `DEMO_KEY` kosong → `403`.
 
 | Endpoint | Body | Fungsi |
 |---|---|---|
@@ -80,7 +86,7 @@ Semua wajib header `X-Demo-Key` = env `DEMO_KEY`. Env kosong → `403`, kunci sa
 | `POST /api/demo/pause` | - | jeda semua kendaraan simulasi (tetap di tempat, `speed` 0, lampu tetap dipegang) |
 | `POST /api/demo/resume` | - | lanjutkan kendaraan yang dijeda |
 | `POST /api/demo/clear` | - | hapus semua kendaraan simulasi (langsung dilepas + pesan `gone`) |
-| `POST /api/demo/reset` | - | semua simpang NORMAL, kendaraan simulasi kembali ke titik mulai (dijeda, trip baru) |
+| `POST /api/demo/reset` | - | semua simpang NORMAL, kendaraan simulasi (termasuk yang sudah sampai tujuan) kembali ke titik mulai (dijeda, trip baru) |
 
 Pengaturan ini hanya di memori: restart server = kembali ke default env.
 
@@ -97,7 +103,7 @@ Prefix topic: `siren-polnes26/`. Broker publik → siapa pun bisa publish; selal
 ### `siren-polnes26/intersection/{id}/cmd` — backend → ESP32 (retained)
 
 ```json
-{ "mode": "PRIORITY", "phase": "A", "vehicleId": "AMB-01", "vehicleType": "ambulance", "ttl": 15, "ts": 1789000000000 }
+{ "mode": "PRIORITY", "phase": "A", "vehicleId": "AMB-01", "vehicleType": "ambulance", "ttl": 15, "ts": 1789000000000, "etaS": 38 }
 { "mode": "NORMAL", "ts": 1789000000000 }
 ```
 
@@ -106,8 +112,12 @@ Selama kendaraan masih mendekat, backend mengirim ulang `PRIORITY` tiap 5 detik.
 ### `siren-polnes26/vehicle/{vehicleId}` — backend → dashboard & Citizen HUD
 
 ```json
-{ "vehicleId": "AMB-01", "type": "ambulance", "lat": -8.16, "lng": 113.70, "speed": 60, "heading": 45, "ts": 1789000000000 }
+{ "vehicleId": "AMB-01", "type": "ambulance", "lat": -8.16, "lng": 113.70, "speed": 60, "heading": 45, "nextId": "S1", "etaS": 31, "ts": 1789000000000 }
 ```
+
+`nextId` dan `etaS` (opsional, ada jika kendaraan sedang mendekati simpang) = simpang berikutnya dan prediksi detik
+sampai tiba, sama dengan `nextIntersection` di respons `POST /api/gps`. Pesan ini dikirim tepat sebelum perintah
+`intersection/{id}/cmd` yang dipicunya.
 
 Saat misi selesai atau kendaraan simulasi dihentikan, topic yang sama menerima `{ "vehicleId": "AMB-01", "gone": true, "ts": … }`
 (tanpa `lat`/`lng`): hapus kendaraan itu sekarang juga.
@@ -126,12 +136,14 @@ Dikirim saat server start dan tiap kali Panel Demo berubah. Citizen HUD yang men
 
 ## Aturan ESP32 (Wokwi)
 
-- 1 ESP32 = 1 simpang. Set `INTERSECTION_ID` (`"S1"`/`"S2"`/`"S3"`), subscribe `siren-polnes26/intersection/<ID>/cmd`.
-- 6 LED: **fase A** = jalan utama (merah/kuning/hijau), **fase B** = jalan silang (merah/kuning/hijau).
+- 1 ESP32 memegang S1–S3: subscribe `siren-polnes26/intersection/+/cmd`, ambil id simpang dari topic, abaikan id lain.
+- 6 LED per simpang: **fase A** = jalan utama (merah/kuning/hijau), **fase B** = jalan silang (merah/kuning/hijau).
 - `NORMAL`: siklus biasa (saran: A hijau 10 dtk → A kuning 3 dtk → B hijau 10 dtk → B kuning 3 dtk).
 - `PRIORITY` fase X: jika jalur lawan sedang hijau → kuning 3 dtk → merah; lalu jalur X hijau, tahan.
 - **Failsafe:** tidak menerima `PRIORITY` baru selama `ttl` detik → kembali ke siklus `NORMAL`.
-- WiFi Wokwi: SSID `Wokwi-GUEST`, tanpa password. Client ID MQTT harus unik (mis. `siren-esp32-S1-<random>`).
+- Kembali ke `NORMAL` setelah `PRIORITY` (perintah NORMAL atau failsafe): jalur yang tadi ditahan hijau langsung
+  kuning 3 dtk, lalu jalur lawan (yang sudah menunggu) hijau. Jangan mulai ulang siklus dari jalur yang sama.
+- WiFi Wokwi: SSID `Wokwi-GUEST`, tanpa password. Client ID MQTT harus unik (mis. `siren-esp32-<random>`).
 - Keep-alive MQTT 60 detik (`mqtt.setKeepAlive(60)`). Wokwi sering berjalan lebih lambat dari waktu nyata, dan dengan default 15 detik broker memutus koneksi.
 - Tes tanpa backend: `npx mqtt pub -h broker.hivemq.com -t "siren-polnes26/intersection/S1/cmd" -m '{"mode":"PRIORITY","phase":"A","vehicleId":"AMB-01","vehicleType":"ambulance","ttl":15,"ts":0}'`
 

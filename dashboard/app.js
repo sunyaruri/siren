@@ -1,8 +1,10 @@
 import mqtt from "https://cdn.jsdelivr.net/npm/mqtt@5.16.0/dist/mqtt.esm.js";
-import { initDemoPanel } from "./demo-panel.js";
+import { initDemoPanel } from "./demo-panel.js?v=20261106h";
 
 const L = window.L;
 const LABEL = { ambulance: "Ambulans", firetruck: "Pemadam" };
+// Phase A = the main road the demo route runs on, B = the cross street (same labels as the Wokwi board).
+const PHASE = { A: "jalur utama", B: "jalur silang" };
 const ICON_PATH = {
   ambulance: "M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z",
   firetruck:
@@ -12,12 +14,19 @@ const ICON_PATH = {
 const css = getComputedStyle(document.documentElement);
 const token = (name) => css.getPropertyValue(name).trim();
 const ZONE_STYLE = {
-  NORMAL: { color: token("--normal"), weight: 1, fillOpacity: 0.05 },
-  PRIORITY: { color: token("--priority"), weight: 2, fillOpacity: 0.15 },
+  NORMAL: { color: token("--normal"), weight: 1, opacity: 0.5, fillOpacity: 0.04 },
+  PRIORITY: { color: token("--priority"), weight: 1.5, opacity: 0.9, fillOpacity: 0.12 },
 };
 
 const el = {
   status: document.getElementById("mqtt-status"),
+  steps: {
+    gps: document.getElementById("step-gps"),
+    ai: document.getElementById("step-ai"),
+    green: document.getElementById("step-green"),
+  },
+  stepAiSub: document.getElementById("step-ai-sub"),
+  demoToggle: document.getElementById("demo-toggle"),
   intersections: document.getElementById("intersections"),
   vehicles: document.getElementById("vehicles"),
   log: document.getElementById("log"),
@@ -36,9 +45,9 @@ const [config, intersections, route] = await Promise.all([
 ]);
 
 // --- map -------------------------------------------------------------------
-const map = L.map("map", { zoomControl: false });
-L.control.zoom({ position: "bottomleft" }).addTo(map);
-// CARTO dark tiles now require an API key; standard OSM tiles are darkened with a CSS filter instead.
+const map = L.map("map", { zoomControl: false, zoomSnap: 0.25 });
+L.control.zoom({ position: "topleft" }).addTo(map);
+// Standard OSM tiles, softened with a CSS filter (.map-tiles) so the glass UI and overlays read.
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
   className: "map-tiles",
@@ -49,7 +58,7 @@ const dotIcon = (mode) =>
   L.divIcon({
     className: "",
     html: `<span class="signal-dot${mode === "PRIORITY" ? " signal-dot--priority" : ""}"></span>`,
-    iconSize: [16, 16],
+    iconSize: [14, 14],
   });
 
 // `type` is whitelisted in onVehicle before it reaches this HTML string.
@@ -68,11 +77,11 @@ const routePin = (modifier, text) =>
     iconSize: null,
   });
 if (route.length > 1) {
-  L.polyline(route, { color: token("--muted"), weight: 3, opacity: 0.35 }).addTo(map);
-  L.marker(route[0], { icon: routePin("start", "▶ Mulai") })
+  L.polyline(route, { color: token("--text"), weight: 4, opacity: 0.22 }).addTo(map);
+  L.marker(route[0], { icon: routePin("start", "Mulai") })
     .addTo(map)
     .bindTooltip("Titik awal rute · Jl. Gajah Mada");
-  L.marker(route[route.length - 1], { icon: routePin("end", "H Tujuan") })
+  L.marker(route[route.length - 1], { icon: routePin("end", "Tujuan") })
     .addTo(map)
     .bindTooltip("Titik akhir rute · RSUD dr. Soebandi");
 }
@@ -87,7 +96,12 @@ for (const info of intersections) {
   }).addTo(map);
   const dot = L.marker([info.lat, info.lng], { icon: dotIcon("NORMAL") })
     .addTo(map)
-    .bindTooltip(`${info.id} · ${info.name}`);
+    .bindTooltip(info.id, {
+      permanent: true,
+      direction: "top",
+      offset: [0, -8],
+      className: "junction-label",
+    });
   junctions.set(info.id, {
     info,
     zone,
@@ -101,7 +115,45 @@ const bounds = L.latLngBounds([]);
 for (const info of intersections)
   bounds.extend(L.latLng(info.lat, info.lng).toBounds(config.radiusM * 2));
 for (const point of route) bounds.extend(point);
-map.fitBounds(bounds, { padding: [20, 20] });
+const panelEl = document.querySelector(".panel");
+// The glass panel floats over the map (right column, or a bottom sheet on narrow screens) and the Panel Demo drawer
+// over its left edge: pad the view so the route is not hidden behind either.
+function fitView(drawerOpen = false) {
+  const sheet = matchMedia("(max-width: 800px)").matches;
+  map.fitBounds(bounds, {
+    paddingTopLeft: [drawerOpen && !sheet ? 392 : 20, 20],
+    // Desktop: keep the route clear of the floating panel (right) and the legend (bottom-left).
+    paddingBottomRight: sheet
+      ? [20, panelEl.offsetHeight + 24]
+      : [panelEl.offsetWidth + 32, (document.querySelector(".legend")?.offsetHeight ?? 0) + 32],
+  });
+}
+
+// Legend: every colour on the map also has a word, so nothing is conveyed by colour alone.
+const legend = L.control({ position: "bottomleft" });
+legend.onAdd = () => {
+  const div = L.DomUtil.create("div", "legend glass");
+  div.innerHTML = `
+    <strong>Keterangan peta</strong>
+    <span><i class="legend__zone"></i><span id="legend-zone"></span></span>
+    <span><i class="legend__dot legend__dot--green"></i>Simpang hijau untuk kendaraan darurat</span>
+    <span><i class="legend__dot"></i>Simpang siklus normal</span>
+    <span><i class="legend__vehicle"></i>Ambulans (biru) / pemadam (merah)</span>
+    <span><i class="legend__route"></i>Rute demo</span>
+    <span><i class="legend__citizen"></i>Warga (posisi simulasi)</span>`;
+  return div;
+};
+legend.addTo(map);
+const setLegendRadius = (m) => {
+  document.getElementById("legend-zone").textContent =
+    `Zona ${m >= 1000 ? `${m / 1000} km` : `${m} m`} di sekitar simpang`;
+};
+setLegendRadius(config.radiusM);
+fitView(); // after the legend exists, so its height is part of the padding
+el.stepAiSub.textContent =
+  config.etaLeadS > 0
+    ? `lampu dibuka saat tiba ≤ ${config.etaLeadS} dtk lagi`
+    : "di radius simpang";
 
 /** id -> { marker, trail, data, lastSeen } */
 const vehicles = new Map();
@@ -109,7 +161,8 @@ const vehicles = new Map();
 // Where Citizen HUDs in "Posisi simulasi" mode are, as set from the Panel Demo.
 const citizenMarker = L.circleMarker([0, 0], {
   radius: 7,
-  color: token("--text"),
+  color: token("--on-solid"),
+  weight: 3,
   fillColor: token("--text"),
   fillOpacity: 1,
 }).bindTooltip("Warga (posisi simulasi)");
@@ -144,32 +197,133 @@ function renderJunctions() {
       cmd.mode === "PRIORITY"
         ? card(
             info.id,
-            `PRIORITAS · ${cmd.phase}`,
+            `Hijau · ${PHASE[cmd.phase]}`,
             "pill--priority",
-            `${info.name} · ${LABEL[cmd.vehicleType]} ${cmd.vehicleId}`,
+            `${info.name} · untuk ${LABEL[cmd.vehicleType]} ${cmd.vehicleId}`,
           )
-        : card(info.id, "NORMAL", "", info.name),
+        : card(info.id, "Siklus normal", "", info.name),
     ),
   );
 }
 
 function renderVehicles() {
-  const items = [...vehicles.entries()].map(([id, v]) => {
-    const held = [...junctions.values()]
-      .filter((j) => j.cmd.vehicleId === id)
-      .map((j) => j.info.id);
-    const speed =
-      v.data.speed === 0 ? "berhenti" : `${Math.round(v.data.speed ?? 0)} km/j`;
-    return card(
-      id,
-      LABEL[v.data.type],
-      `pill--${v.data.type}`,
-      held.length ? `${speed} · prioritas di ${held.join(", ")}` : speed,
-    );
-  });
-  el.vehicles.replaceChildren(
-    ...(items.length ? items : [empty("Belum ada kendaraan aktif")]),
+  const items = [...vehicles.entries()].map(([id, v]) => vehicleCard(id, v));
+  el.vehicles.replaceChildren(...(items.length ? items : [vehiclesEmpty()]));
+  renderFlow();
+}
+
+function vehiclesEmpty() {
+  const li = document.createElement("li");
+  li.className = "empty-state";
+  const text = document.createElement("p");
+  text.textContent =
+    "Belum ada kendaraan darurat aktif. Tekan Mulai demo untuk menjalankan ambulans simulasi menuju simpang S1, atau buka aplikasi Driver di /mobile/.";
+  const btn = document.createElement("button");
+  btn.className = "btn btn--primary";
+  btn.textContent = "Mulai demo";
+  const note = document.createElement("p");
+  note.className = "empty-state__note";
+  note.setAttribute("role", "status");
+  btn.addEventListener("click", () => quickRun(btn, note));
+  li.append(text, btn, note);
+  return li;
+}
+
+/** Keyless demo start (POST /api/demo/quick-run): one ambulance just outside S1's radius, capped server-side. */
+async function quickRun(btn, note) {
+  btn.disabled = true;
+  btn.textContent = "Menjalankan…";
+  try {
+    const res = await fetch("/api/demo/quick-run", { method: "POST" });
+    if (res.ok) {
+      note.textContent = "Ambulans simulasi berangkat. Kartunya muncul dalam 1–2 detik.";
+      return; // the vehicle message replaces this empty state
+    }
+    note.textContent =
+      res.status === 429
+        ? "Simulasi sedang penuh (maks. 3 kendaraan). Coba lagi sebentar."
+        : "Simulasi tidak tersedia saat ini.";
+  } catch {
+    note.textContent = "Tidak bisa terhubung ke server.";
+  }
+  btn.disabled = false;
+  btn.textContent = "Mulai demo";
+}
+
+function span(className, text) {
+  const node = document.createElement("span");
+  node.className = className;
+  node.textContent = text;
+  return node;
+}
+
+/** One vehicle with the ETA model's prediction for its next intersection. */
+function vehicleCard(id, v) {
+  const { data } = v;
+  const li = document.createElement("li");
+  li.className = "vcard";
+  const speed =
+    data.speed === 0 ? "berhenti" : `${Math.round(data.speed ?? 0)} km/j`;
+  const head = document.createElement("div");
+  head.className = "vcard__head";
+  head.append(
+    span("vcard__id", id),
+    span(`pill pill--${data.type}`, LABEL[data.type]),
+    span("vcard__speed", speed),
   );
+  li.append(head);
+
+  const target =
+    typeof data.nextId === "string" && Number.isFinite(data.etaS)
+      ? junctions.get(data.nextId)
+      : undefined;
+  if (!target) {
+    li.append(span("vcard__idle", "Tidak sedang mendekati simpang"));
+    return li;
+  }
+
+  const lead = config.etaLeadS;
+  const green = target.cmd.mode === "PRIORITY" && target.cmd.vehicleId === id;
+  const eta = document.createElement("div");
+  eta.className = "vcard__eta";
+  eta.append(
+    span("vcard__eta-value", String(data.etaS)),
+    span("vcard__eta-unit", "dtk"),
+    span("vcard__eta-label", `prediksi AI tiba di ${target.info.id}`),
+  );
+  // The bar fills up as the predicted arrival approaches the threshold; full = green opens.
+  const bar = document.createElement("div");
+  bar.className = `vcard__bar${green ? " vcard__bar--green" : ""}`;
+  bar.setAttribute("aria-hidden", "true");
+  const fill = document.createElement("span");
+  const ratio = green || lead <= 0 ? 1 : Math.min(1, lead / Math.max(data.etaS, 1));
+  fill.style.width = `${Math.round(ratio * 100)}%`;
+  bar.append(fill);
+  const state = green
+    ? span(
+        "vcard__state vcard__state--green",
+        `Lampu ${target.info.id} hijau untuk kendaraan ini`,
+      )
+    : span(
+        "vcard__state",
+        lead > 0
+          ? `Menunggu · hijau dibuka saat ETA ≤ ${lead} dtk`
+          : "Menunggu masuk radius simpang",
+      );
+  li.append(eta, bar, state);
+  return li;
+}
+
+/** Lights up the "Cara kerja" steps that are happening right now. */
+function renderFlow() {
+  const list = [...vehicles.values()];
+  const active = {
+    gps: list.length > 0,
+    ai: list.some((v) => Number.isFinite(v.data.etaS)),
+    green: [...junctions.values()].some((j) => j.cmd.mode === "PRIORITY"),
+  };
+  for (const [key, node] of Object.entries(el.steps))
+    node.classList.toggle("flow__step--active", active[key]);
 }
 
 function log(text, kind = "info") {
@@ -183,8 +337,10 @@ function log(text, kind = "info") {
 }
 
 function setStatus(online) {
-  el.status.textContent = online ? "MQTT online" : "MQTT terputus";
-  el.status.className = `pill ${online ? "pill--online" : "pill--offline"}`;
+  el.status.querySelector(".live__text").textContent = online
+    ? "Live"
+    : "Terputus · menyambung ulang…";
+  el.status.className = `live ${online ? "live--on" : "live--off"}`;
 }
 
 // --- state updates -----------------------------------------------------------
@@ -215,10 +371,15 @@ function onCmd(id, cmd) {
     next.vehicleId === j.cmd.vehicleId
   )
     return;
+  // `etaS` is set only when the ETA model triggered this command.
+  const eta =
+    isPriority && Number.isFinite(cmd.etaS)
+      ? ` · dipicu AI: tiba ${cmd.etaS} dtk lagi`
+      : "";
   log(
     isPriority
-      ? `${id} → PRIORITAS · ${LABEL[next.vehicleType]} ${next.vehicleId} · fase ${next.phase}`
-      : `${id} → NORMAL`,
+      ? `${id} hijau (${PHASE[next.phase]}) untuk ${LABEL[next.vehicleType]} ${next.vehicleId}${eta}`
+      : `${id} kembali ke siklus normal`,
     isPriority ? "priority" : "info",
   );
   j.cmd = next;
@@ -282,7 +443,8 @@ function onDemo(msg) {
   if (Number.isFinite(msg?.radiusM) && msg.radiusM > 0 && msg.radiusM !== config.radiusM) {
     config.radiusM = msg.radiusM;
     for (const j of junctions.values()) j.zone.setRadius(msg.radiusM);
-    log(`Radius prioritas → ${msg.radiusM} m`);
+    setLegendRadius(msg.radiusM);
+    log(`Radius prioritas diubah ke ${msg.radiusM} m`);
   }
 }
 
@@ -292,7 +454,7 @@ setInterval(() => {
   for (const [id, j] of junctions) {
     if (j.cmd.mode === "PRIORITY" && now > j.expiresAt) {
       j.cmd = { mode: "NORMAL" };
-      log(`${id} → NORMAL (failsafe, tanpa refresh)`);
+      log(`${id} kembali normal (failsafe: perintah tidak diperbarui)`);
       applyJunction(j);
     }
   }
@@ -329,13 +491,7 @@ client.on("message", (topic, payload) => {
 });
 
 // The drawer covers the left of the map, so shift the view right while it is open.
-initDemoPanel({
-  onToggle: (open) =>
-    map.fitBounds(bounds, {
-      paddingTopLeft: [open ? 392 : 20, 20],
-      paddingBottomRight: [20, 20],
-    }),
-});
+initDemoPanel({ onToggle: fitView });
 
 renderJunctions();
 renderVehicles();

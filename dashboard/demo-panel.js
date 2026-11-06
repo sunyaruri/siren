@@ -34,6 +34,12 @@ const el = {
 
 const LABEL = { ambulance: "Ambulans", firetruck: "Pemadam" };
 const km = (m) => `${(m / 1000).toFixed(2)} km`;
+const runStatus = (r) =>
+  r.arrived
+    ? "sampai tujuan (Reset untuk ulang)"
+    : r.paused
+      ? "dijeda"
+      : `${r.speedKmh} km/j`;
 
 function readKey() {
   try {
@@ -113,6 +119,7 @@ export function initDemoPanel({ onToggle }) {
   function render(next) {
     state = next;
     el.body.hidden = false;
+    document.getElementById("demo-key-hint").hidden = true; // unlocked: the hint about the key no longer applies
 
     el.speed.value = String(state.speedKmh);
     el.speedOut.textContent = `${state.speedKmh} km/j`;
@@ -154,7 +161,7 @@ export function initDemoPanel({ onToggle }) {
       ...(state.runs.length
         ? state.runs.map((r) => {
             const li = document.createElement("li");
-            li.textContent = `${LABEL[r.type]} ${r.vehicleId} · ${km(r.alongM)} / ${km(state.routeLengthM)} · ${r.paused ? "dijeda" : `${r.speedKmh} km/j`}`;
+            li.textContent = `${LABEL[r.type]} ${r.vehicleId} · ${km(r.alongM)} / ${km(state.routeLengthM)} · ${runStatus(r)}`;
             return li;
           })
         : [
@@ -166,9 +173,11 @@ export function initDemoPanel({ onToggle }) {
     );
 
     // One button: pause while anything moves, otherwise resume.
-    const moving = state.runs.some((r) => !r.paused);
-    el.pause.textContent = moving ? "Jeda" : "Lanjutkan";
-    el.pause.disabled = el.clear.disabled = state.runs.length === 0;
+    // Arrived vehicles are done: only the ones still on the road can be paused or resumed.
+    const onRoad = state.runs.filter((r) => !r.arrived);
+    el.pause.textContent = onRoad.some((r) => !r.paused) ? "Jeda" : "Lanjutkan";
+    el.pause.disabled = onRoad.length === 0;
+    el.clear.disabled = state.runs.length === 0;
 
     el.codes.replaceChildren(
       ...state.codes.map((code) => {
@@ -246,7 +255,7 @@ export function initDemoPanel({ onToggle }) {
     act(
       api(
         "POST",
-        state.runs.some((r) => !r.paused) ? "/pause" : "/resume",
+        state.runs.some((r) => !r.arrived && !r.paused) ? "/pause" : "/resume",
       ),
     ),
   );

@@ -16,8 +16,10 @@ export function ingestGps(
   gps: GpsInput,
   now: number,
 ): NextIntersection | null {
-  publish(`${topicPrefix}/vehicle/${gps.vehicleId}`, { ...gps, ts: now }, false);
   const { commands, next } = engine.update(gps, now);
+  // The vehicle (with its ETA) goes out before the commands, so the dashboard knows the ETA that triggered a PRIORITY.
+  const eta = next ? { nextId: next.id, etaS: next.etaS } : {};
+  publish(`${topicPrefix}/vehicle/${gps.vehicleId}`, { ...gps, ...eta, ts: now }, false);
   publishCommands(publish, topicPrefix, commands);
   return next;
 }

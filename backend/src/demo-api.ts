@@ -40,6 +40,9 @@ export function publishDemo(publish: Publish, publicConfig: PublicConfig, demo: 
 
 const digest = (s: string): Buffer => createHash('sha256').update(s).digest();
 
+/** Most simulated vehicles a keyless visitor can have on the road at once (`POST /api/demo/quick-run`). */
+export const MAX_PUBLIC_RUNS = 3;
+
 export function demoRouter({ demo, engine, publish, publicConfig, intersections, missionCodes }: RouterDeps): express.Router {
   const router = express.Router();
 
@@ -55,6 +58,26 @@ export function demoRouter({ demo, engine, publish, publicConfig, intersections,
     }
     next();
   };
+  // Keyless on purpose: a visitor (e.g. a judge) can start one ambulance just outside S1's radius without the panel
+  // key. It can only add simulated vehicles, capped at MAX_PUBLIC_RUNS; every other demo route stays behind the key.
+  router.post('/quick-run', (_req, res) => {
+    if (!demo.key) {
+      res.status(403).json({ error: 'demo panel disabled' });
+      return;
+    }
+    const now = Date.now();
+    demo.runner.dropArrived();
+    if (demo.runner.list(now).length >= MAX_PUBLIC_RUNS) {
+      res.status(429).json({ error: 'demo busy' });
+      return;
+    }
+    const first = intersections[0];
+    // Inside the zone but still too far for the ETA rule: the card shows "Menunggu", then green ~20 s later at 60 km/h.
+    const startM = first ? Math.max(0, demo.route.alongM(first) - 0.75 * demo.engineOpts.radiusM) : 0;
+    const vehicleId = demo.runner.start('ambulance', startM, demo.settings.speedKmh, now);
+    res.status(201).json({ vehicleId });
+  });
+
   router.use(requireKey);
 
   const state = (now: number) => ({

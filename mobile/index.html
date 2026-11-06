@@ -4,132 +4,156 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>SIREN Mobile</title>
-    <meta name="theme-color" content="#0b0f19" />
+    <meta name="theme-color" content="#eef0f3" />
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" href="icons/icon-192.png" />
     <link rel="apple-touch-icon" href="icons/icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=20261106i" />
   </head>
   <body>
     <!-- Landing: pilih peran -->
     <main id="view-landing" class="view">
       <div class="landing">
-        <header class="brand">
-          <span class="brand__mark">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18v-6a5 5 0 1 1 10 0v6" /><path d="M5 21a1 1 0 0 0 1-1v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1a1 1 0 0 0 1 1z" /><path d="M21 12h1" /><path d="M18.5 4.5 18 5" /><path d="M2 12h1" /><path d="M12 2v1" /><path d="m4.929 4.929.707.707" /><path d="M12 12v6" /></svg>
+        <header class="app-header">
+          <span class="app-header__mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18v-6a5 5 0 1 1 10 0v6" /><path d="M5 21a1 1 0 0 0 1-1v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1a1 1 0 0 0 1 1z" /><path d="M21 12h1" /><path d="M18.5 4.5 18 5" /><path d="M2 12h1" /><path d="M12 2v1" /><path d="m4.929 4.929.707.707" /><path d="M12 12v6" /></svg>
           </span>
-          <h1>SIREN</h1>
-          <p class="landing__sub">Lampu hijau otomatis untuk ambulans dan pemadam kebakaran di simpang bersinyal</p>
+          <span class="app-header__name">SIREN</span>
         </header>
 
-        <p class="landing__label">Masuk sebagai</p>
-        <button id="btn-driver" class="role role--driver">
-          <span class="role__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" /></svg>
-          </span>
-          <span class="role__body">
-            <strong>Petugas Darurat</strong>
-            <span>Sopir ambulans / pemadam. Wajib Kode Misi dari Command Center 112.</span>
-          </span>
-          <span class="role__chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></span>
-        </button>
-        <button id="btn-citizen" class="role role--citizen">
-          <span class="role__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0" /><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" /></svg>
-          </span>
-          <span class="role__body">
-            <strong>Warga / Pengendara</strong>
-            <span>Dapat peringatan &amp; getar saat kendaraan darurat mendekat.</span>
-          </span>
-          <span class="role__chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></span>
-        </button>
+        <div class="landing__intro">
+          <h1 class="title-large">Pilih mode</h1>
+          <p class="landing__sub">Lampu hijau otomatis untuk ambulans dan pemadam kebakaran.</p>
+        </div>
 
-        <p class="landing__foot">Prototype · Kota Jember</p>
+        <div class="roles">
+          <button id="btn-driver" class="role role--driver">
+            <span class="role__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" /></svg>
+            </span>
+            <span class="role__body">
+              <strong>Petugas Darurat</strong>
+              <span>Ambulans dan pemadam, dengan Kode Misi</span>
+            </span>
+            <span class="role__chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></span>
+          </button>
+          <button id="btn-citizen" class="role role--citizen">
+            <span class="role__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0" /><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" /></svg>
+            </span>
+            <span class="role__body">
+              <strong>Warga &amp; Pengendara</strong>
+              <span>Peringatan saat kendaraan darurat mendekat</span>
+            </span>
+            <span class="role__chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></span>
+          </button>
+        </div>
       </div>
     </main>
 
     <!-- Driver Cockpit -->
     <main id="view-driver" class="view" hidden>
-      <header class="topbar">
-        <button class="btn-back" data-back aria-label="Kembali">←</button>
-        <h2>Driver Cockpit</h2>
-        <span id="driver-status" class="pill pill--offline">Siap</span>
+      <header class="topbar glass">
+        <button class="btn-back" data-back aria-label="Kembali ke menu awal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
+        <h2>Petugas Darurat</h2>
+        <span id="driver-status" class="pill" role="status">Siap</span>
       </header>
 
-      <form id="driver-setup" class="panel-form">
-        <section class="mission">
+      <form id="driver-setup" class="panel-form" novalidate>
+        <section class="card mission">
           <label class="mission__label" for="mission-code">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
             Kode Misi
           </label>
-          <input id="mission-code" class="mission__input" type="text" placeholder="XXXX-000" maxlength="64" required autocomplete="off" autocapitalize="characters" spellcheck="false" />
-          <p class="mission__hint">Diberikan Command Center 112 / RS rujukan saat penugasan. Tanpa kode yang valid, lampu simpang tidak berubah.</p>
+          <input id="mission-code" class="mission__input" type="text" placeholder="XXXX-000" maxlength="64" required autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="driver-error mission-hint" />
+          <p id="driver-error" class="form-error" role="alert"></p>
+          <p id="mission-hint" class="mission__hint">Diberikan Command Center 112 saat penugasan. Kode akses demo: <b>DEMO-112</b></p>
         </section>
-        <div class="form-row">
-          <label>
-            ID Kendaraan
-            <input id="vehicle-id" type="text" placeholder="AMB-01" maxlength="32" required pattern="[A-Za-z0-9_\-]{1,32}" />
-          </label>
-          <label>
-            Jenis
-            <select id="vehicle-type">
-              <option value="ambulance">Ambulans</option>
-              <option value="firetruck">Pemadam</option>
-            </select>
-          </label>
-        </div>
-        <details class="advanced">
-          <summary>Pengaturan lanjutan</summary>
+        <section class="card">
+          <div class="form-row">
+            <label>
+              ID Kendaraan
+              <input id="vehicle-id" type="text" value="AMB-01" placeholder="AMB-01" maxlength="32" required pattern="[A-Za-z0-9_\-]{1,32}" autocomplete="off" aria-describedby="vehicle-id-error" />
+            </label>
+            <label>
+              Jenis
+              <select id="vehicle-type">
+                <option value="ambulance">Ambulans</option>
+                <option value="firetruck">Pemadam</option>
+              </select>
+            </label>
+          </div>
+          <p id="vehicle-id-error" class="form-error" role="alert"></p>
+        </section>
+        <section class="card">
           <label class="toggle">
-            <input id="gps-toggle" type="checkbox" />
-            Pakai GPS asli (default: simulasi rute)
+            <span>Pakai GPS asli<small>Mati: simulasi rute demo di Jember</small></span>
+            <input id="gps-toggle" class="switch" type="checkbox" role="switch" />
           </label>
-          <label>
-            URL Backend
-            <input id="backend-url" type="text" placeholder="http://localhost:3000" />
-          </label>
-        </details>
-        <p id="driver-error" class="form-error" role="alert"></p>
+        </section>
         <button id="btn-start" type="submit" class="btn btn--primary">Mulai Misi</button>
       </form>
 
       <div id="driver-run" hidden>
-        <div id="driver-map"></div>
-        <div id="hud-card" class="hud-card">
-          <span id="hud-mode" class="pill pill--offline">NORMAL</span>
-          <p id="hud-name" class="hud-card__name">Belum ada simpang terdekat</p>
-          <p id="hud-distance" class="hud-card__distance">—</p>
+        <div id="driver-map" role="img" aria-label="Peta posisi kendaraan"></div>
+        <div class="sheet glass">
+          <section id="hud-card" class="hud" data-state="idle" aria-label="Simpang berikutnya">
+            <p class="hud__state" role="status" aria-atomic="true">
+              <svg class="hud__light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="3" /><circle cx="12" cy="7" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="17" r="1.6" /></svg>
+              <span id="hud-state">Mencari simpang di depan…</span>
+            </p>
+            <p id="hud-eta-label" class="hud__label"></p>
+            <p id="hud-eta" class="hud__eta"></p>
+            <p class="hud__meta"><span id="hud-name" class="hud__name"></span><span id="hud-distance" class="hud__distance"></span></p>
+            <p id="hud-hint" class="hud__hint">Lampu simpang berjalan normal sampai Anda mendekat.</p>
+          </section>
+          <button id="btn-stop" type="button" class="btn btn--danger">Selesai Misi</button>
         </div>
-        <button id="btn-stop" class="btn btn--danger">Selesai Misi</button>
       </div>
     </main>
 
     <!-- Citizen HUD -->
     <main id="view-citizen" class="view" hidden>
-      <header class="topbar">
-        <button class="btn-back" data-back aria-label="Kembali">←</button>
-        <h2>Citizen HUD</h2>
-        <span id="citizen-status" class="pill pill--offline">MQTT terputus</span>
+      <header class="topbar glass">
+        <button class="btn-back" data-back aria-label="Kembali ke menu awal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
+        <h2>Warga &amp; Pengendara</h2>
+        <span id="citizen-status" class="pill pill--offline" role="status">Terputus</span>
       </header>
-      <section id="citizen-alert" class="citizen" aria-live="assertive">
-        <p id="citizen-arrow" class="citizen__arrow" aria-hidden="true"></p>
-        <p id="citizen-title" class="citizen__title">Menunggu posisi Anda…</p>
-        <p id="citizen-direction" class="citizen__direction"></p>
-        <p id="citizen-distance" class="citizen__distance"></p>
-        <p id="citizen-detail" class="citizen__detail"></p>
+      <section id="citizen-alert" class="citizen citizen--wait">
+        <div class="citizen__card">
+          <div id="citizen-arrow" class="citizen__icon" data-icon="" aria-hidden="true">
+            <svg class="citizen__svg-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V4" /><path d="m5 11 7-7 7 7" /></svg>
+            <svg class="citizen__svg-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" /></svg>
+          </div>
+          <div class="citizen__headline" aria-live="assertive" aria-atomic="true">
+            <p id="citizen-title" class="citizen__title">Menunggu posisi Anda…</p>
+            <p id="citizen-direction" class="citizen__direction"></p>
+          </div>
+          <p id="citizen-distance" class="citizen__distance"></p>
+          <p id="citizen-detail" class="citizen__detail"></p>
+          <p id="citizen-eta" class="citizen__eta"></p>
+          <p id="citizen-help" class="citizen__help"></p>
+        </div>
+        <p id="citizen-hint" class="citizen__hint"></p>
       </section>
-      <label class="toggle citizen__sim">
-        <input id="citizen-sim" type="checkbox" />
-        Posisi simulasi (diatur dari Panel Demo)
-      </label>
-      <p id="citizen-source" class="citizen__source"></p>
+      <div class="citizen__bar card">
+        <label class="toggle citizen__sim">
+          <span>Posisi simulasi</span>
+          <input id="citizen-sim" class="switch" type="checkbox" role="switch" />
+        </label>
+        <p id="citizen-source" class="citizen__source"></p>
+      </div>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=20261106i"></script>
   </body>
 </html>

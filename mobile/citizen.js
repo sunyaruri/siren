@@ -1,13 +1,13 @@
-import { bearingDeg, connectMqtt, haversineM } from "./mqtt-client.js";
+import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106i";
 
 const LABEL = { ambulance: "Ambulans", firetruck: "Pemadam" };
 const COMPASS = ["utara", "timur laut", "timur", "tenggara", "selatan", "barat daya", "barat", "barat laut"];
-// Arrow points at where the vehicle is, relative to the direction the citizen is travelling.
+// Arrow (SVG, rotated in CSS by data-icon) points at where the vehicle is, relative to the citizen's travel direction.
 const SIDE = {
-  back: { arrow: "↓", text: "DARI BELAKANG" },
-  front: { arrow: "↑", text: "DARI DEPAN" },
-  right: { arrow: "→", text: "DARI KANAN" },
-  left: { arrow: "←", text: "DARI KIRI" },
+  back: { arrow: "back", text: "DARI BELAKANG" },
+  front: { arrow: "front", text: "DARI DEPAN" },
+  right: { arrow: "right", text: "DARI KANAN" },
+  left: { arrow: "left", text: "DARI KIRI" },
 };
 const MOVING_AWAY_TOLERANCE_M = 2; // GPS noise margin before "moving away" hides the alert
 const BUZZ_PATTERN = [400, 150, 400];
@@ -23,17 +23,23 @@ const el = {
   direction: document.getElementById("citizen-direction"),
   distance: document.getElementById("citizen-distance"),
   detail: document.getElementById("citizen-detail"),
+  eta: document.getElementById("citizen-eta"),
+  help: document.getElementById("citizen-help"),
+  hint: document.getElementById("citizen-hint"),
   sim: document.getElementById("citizen-sim"),
   source: document.getElementById("citizen-source"),
 };
 
 const formatDistance = (m) => (m >= 1000 ? `${+(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`);
+const INTERSECTION_ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
 
 export function initCitizen(config) {
   /** Citizen position { lat, lng, heading | null }, or null while waiting for GPS. */
   let me = null;
   let gpsPos = null;
   let demoReceived = false;
+  /** Why GPS failed, shown in the waiting state; null while GPS works or has not answered yet. */
+  let gpsError = null;
   let lastBuzz = 0;
   /** vehicleId -> { msg, distanceM, prevDistanceM, lastSeen } */
   const vehicles = new Map();
@@ -73,20 +79,37 @@ export function initCitizen(config) {
     return relative < 180 ? SIDE.right : SIDE.left;
   }
 
-  function show(state, { arrow = "", title, direction = "", distance = "", detail = "" }) {
+  function show(state, { arrow = "", title, direction = "", distance = "", detail = "", eta = "", help = "", hint = "" }) {
     el.alert.className = `citizen citizen--${state}`;
-    el.arrow.textContent = arrow;
-    el.title.textContent = title;
-    el.direction.textContent = direction;
+    el.arrow.dataset.icon = arrow;
+    setText(el.title, title); // title + direction sit in an assertive live region: write only on change
+    setText(el.direction, direction);
     el.distance.textContent = distance;
     el.detail.textContent = detail;
+    el.eta.textContent = eta;
+    el.help.textContent = help;
+    el.hint.textContent = hint;
+  }
+
+  // Shown while nothing is closing in, so a first-time viewer knows what this screen is for and how to try it.
+  const helpText = () =>
+    `Layar ini berubah merah-biru dan HP bergetar saat ambulans atau pemadam mendekat dalam ${formatDistance(config.radiusM)}, lengkap dengan arah dan jaraknya.`;
+  const hintText = () =>
+    el.sim.checked
+      ? "Posisi simulasi aktif. Jalankan kendaraan dari Panel Demo di dashboard untuk melihat peringatan."
+      : "Uji coba jauh dari Jember: aktifkan Posisi simulasi di bawah, lalu jalankan kendaraan dari Panel Demo.";
+
+  // Optional `nextId`/`etaS` on the vehicle message: when it reaches its next intersection (not this citizen).
+  function etaText(msg) {
+    if (!Number.isFinite(msg.etaS) || msg.etaS < 0 || !INTERSECTION_ID_RE.test(msg.nextId ?? "")) return "";
+    return `Menuju simpang ${msg.nextId}, tiba ±${formatEta(msg.etaS)}`;
   }
 
   // Which position the distances use: the alert only makes sense if this matches the dot on the dashboard.
   function renderSource() {
     if (el.sim.checked)
       el.source.textContent = demoReceived
-        ? "Posisi: simulasi dari Panel Demo (titik putih di dashboard)"
+        ? "Posisi: simulasi dari Panel Demo (titik hitam di dashboard)"
         : "Posisi: simulasi bawaan, Panel Demo belum terhubung";
     else el.source.textContent = gpsPos ? `Posisi: GPS asli (±${gpsPos.accuracyM} m)` : "Posisi: menunggu GPS…";
   }
@@ -102,14 +125,18 @@ export function initCitizen(config) {
       lastBuzz = 0;
       if (!me)
         show("wait", {
-          title: "Menunggu posisi Anda…",
-          detail: "Izinkan akses lokasi.",
+          title: gpsError ? "GPS tidak tersedia" : "Menunggu posisi Anda…",
+          detail: gpsError ?? "Izinkan akses lokasi.",
+          help: helpText(),
+          hint: hintText(),
         });
       else
         show("safe", {
-          arrow: "✓",
+          arrow: "safe",
           title: "Aman",
-          detail: `Tidak ada kendaraan darurat mendekat dalam ${formatDistance(config.radiusM)}.`,
+          detail: "Tidak ada kendaraan darurat yang mendekat.",
+          help: helpText(),
+          hint: hintText(),
         });
       return;
     }
@@ -121,6 +148,7 @@ export function initCitizen(config) {
       direction: text,
       distance: formatDistance(threat.distanceM),
       detail: "Menepi & beri jalan",
+      eta: etaText(threat.msg),
     });
     // Repeats while the vehicle keeps closing in; Android only (iOS Safari has no Vibration API).
     const now = Date.now();
@@ -135,14 +163,12 @@ export function initCitizen(config) {
       // Heading is only meaningful while moving; a parked phone reports NaN or a stale value.
       const heading = Number.isFinite(coords.heading) && coords.speed > 1 ? coords.heading : null;
       gpsPos = { lat: coords.latitude, lng: coords.longitude, heading, accuracyM: Math.round(coords.accuracy) };
+      gpsError = null;
       if (!el.sim.checked) setMe(gpsPos);
     },
     (err) => {
-      if (!el.sim.checked && !me)
-        show("wait", {
-          title: "GPS tidak tersedia",
-          detail: err.code === err.PERMISSION_DENIED ? "Izin lokasi ditolak." : err.message,
-        });
+      gpsError = err.code === err.PERMISSION_DENIED ? "Izin lokasi ditolak." : err.message;
+      render();
     },
     { enableHighAccuracy: true, maximumAge: 1000 },
   );
@@ -189,7 +215,7 @@ export function initCitizen(config) {
 
   connectMqtt(config.mqttWsUrl, [`${config.topicPrefix}/vehicle/+`, `${config.topicPrefix}/demo`], {
     onStatus: (online) => {
-      el.status.textContent = online ? "MQTT online" : "MQTT terputus";
+      el.status.textContent = online ? "Terhubung" : "Terputus";
       el.status.className = `pill ${online ? "pill--online" : "pill--offline"}`;
     },
     onMessage: (topic, msg) => (topic.endsWith("/demo") ? onDemo(msg) : onVehicle(msg)),

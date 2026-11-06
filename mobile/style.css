@@ -1,226 +1,355 @@
 :root {
-  --bg: #0b0f19;
-  --surface: #121a2b;
-  --surface-2: #1a233a;
-  --text: #f3f4f6;
-  --muted: #9ca3af;
-  --border: #2a3448;
-  --normal: #64748b;
-  --priority: #22c55e;
-  --ambulance: #38bdf8;
-  --firetruck: #ef4444;
-  --offline: #ef4444;
-  --danger: #ef4444;
-  --font-ui: "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  /* "Liquid Glass" (light): the map is the canvas, UI floats over it as frosted glass. Amber = waiting only,
+     red = emergency vehicles / errors. No glows, no outlines. */
+  --bg: #eef0f3;
+  --surface: rgb(255 255 255 / 0.72); /* glass panel fill */
+  --surface-strong: rgb(255 255 255 / 0.86);
+  --surface-2: #ffffff; /* solid card inside glass */
+  --glass-blur: saturate(180%) blur(22px);
+  --glass-edge: rgb(255 255 255 / 0.65);
+  --glass-hairline: rgb(0 0 0 / 0.08);
+  --glass-shadow: 0 10px 40px rgb(0 0 0 / 0.12), 0 1px 3px rgb(0 0 0 / 0.08);
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  --text: #1d1d1f;
+  --muted: #5e5e63; /* >= 4.5:1 on white and on --surface over a light map */
+  --border: rgb(60 60 67 / 0.16);
+  --chip: rgb(118 118 128 / 0.12);
+  --normal: #8e8e93;
+  --brand: #1d1d1f; /* primary buttons: ink pill, white text */
+  --priority: #248a3d; /* white text 4.6:1 */
+  --ambulance: #0066cc; /* white text 5.6:1 */
+  --firetruck: #d70015; /* white text 5.0:1 */
+  --offline: #d70015;
+  --danger: #d70015;
+  --danger-strong: #a50011;
+  --wait: #ff9f0a; /* fills only; text uses --wait-ink */
+  --wait-ink: #8a4b00;
+  --on-solid: #ffffff;
+  --radius-panel: 20px;
+  --radius-card: 14px;
+  --radius-pill: 999px;
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; /* literal codes only */
+  --focus-ring: 3px solid rgb(0 102 204 / 0.5);
+  /* One app column for every view: phone width on phones, centred 480px on tablets and desktops. */
+  --pad: clamp(16px, 5vw, 20px);
+  --col: min(480px, 100%);
+  --col-inner: calc(var(--col) - 2 * var(--pad));
+  --card-shadow: 0 0 0 1px var(--glass-hairline), 0 1px 2px rgb(0 0 0 / 0.05);
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
 }
-html,
-body {
+/* The page colour sits on the root so it paints the whole canvas at any window size. */
+html {
   height: 100%;
+  background: var(--bg);
 }
 body {
-  background: var(--bg);
+  height: 100%;
   color: var(--text);
-  font: 16px/1.4 var(--font-ui);
+  font: 16px/1.5 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
 }
 
 /* An author rule setting `display` on the same element as [hidden] beats the browser's [hidden]{display:none}
    UA rule, so the flex display must be scoped to :not([hidden]) or every view stays visible and stacked. */
 .view:not([hidden]) {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100dvh;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
 /* Scoped: a global svg rule would also resize Leaflet's vector overlay. */
 .landing svg,
-.mission svg {
+.mission svg,
+.topbar svg,
+.hud svg {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
 }
 
+/* --- surfaces --- */
+.glass {
+  background: var(--surface);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), 0 0 0 1px var(--glass-hairline), var(--glass-shadow);
+  border-radius: var(--radius-panel);
+}
+/* Fallbacks for .glass live at the end of the file so they also beat per-component background overrides. */
+
+/* Solid card on the page background (landing, form, citizen). */
+.card {
+  padding: 16px;
+  border-radius: var(--radius-panel);
+  background: var(--surface-2);
+  box-shadow: var(--card-shadow);
+}
+
+.title-large {
+  font: 700 clamp(28px, 8vw, 32px) / 1.1 var(--font-ui);
+  letter-spacing: -0.025em;
+}
+
 /* --- landing --- */
-/* Faint red/blue glow at the top: emergency-light cue without animating anything. */
 #view-landing {
-  background:
-    radial-gradient(ellipse 60% 40% at 15% 0%, rgb(239 68 68 / 0.16), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 85% 0%, rgb(56 189 248 / 0.14), transparent 70%),
-    var(--bg);
+  overflow-y: auto;
 }
 .landing {
-  margin: auto;
-  width: min(400px, 100%);
-  padding: 24px 16px;
   display: grid;
-  gap: 12px;
+  align-content: start;
+  gap: 32px;
+  width: var(--col);
+  margin: 0 auto;
+  padding: 16px var(--pad) 32px;
 }
-.brand {
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  text-align: center;
-  margin-bottom: 20px;
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
 }
-.brand__mark {
+.app-header__mark {
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--firetruck);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--danger);
+  color: var(--on-solid);
 }
-.brand__mark svg {
-  width: 34px;
-  height: 34px;
+.landing .app-header__mark svg {
+  width: 20px;
+  height: 20px;
 }
-.brand h1 {
-  font: 700 36px var(--font-mono);
-  letter-spacing: 0.18em;
-  padding-left: 0.18em; /* letter-spacing trails the last letter; keeps the word visually centered */
+.app-header__name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.landing__intro {
+  display: grid;
+  gap: 8px;
 }
 .landing__sub {
   color: var(--muted);
-  font-size: 15px;
-  max-width: 30ch;
-}
-.landing__label {
-  color: var(--muted);
-  font: 600 12px var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.landing__foot {
-  margin-top: 16px;
-  text-align: center;
-  color: var(--muted);
-  font: 12px var(--font-mono);
+  font-size: 16px;
 }
 
+.roles {
+  display: grid;
+  gap: 12px;
+}
 .role {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   width: 100%;
+  min-height: 76px;
   padding: 16px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-panel);
+  background: var(--surface-2);
+  box-shadow: var(--card-shadow);
   color: var(--text);
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition:
+    background-color 150ms ease-out,
+    transform 150ms ease-out;
+}
+.role:hover {
+  background: #f9f9fb;
 }
 .role:active {
-  background: var(--surface-2);
-}
-.role:focus-visible {
-  outline: 2px solid var(--ambulance);
-  outline-offset: 2px;
-}
-.role--driver {
-  border-color: rgb(34 197 94 / 0.5);
-  background: linear-gradient(135deg, rgb(34 197 94 / 0.14), var(--surface) 60%);
+  transform: scale(0.985);
 }
 .role__icon {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
-  background: var(--surface-2);
+  background: rgb(0 102 204 / 0.1);
   color: var(--ambulance);
   flex-shrink: 0;
 }
 .role--driver .role__icon {
-  background: var(--priority);
-  color: #06210f;
+  background: rgb(215 0 21 / 0.1);
+  color: var(--danger);
 }
 .role__body {
   flex: 1;
+  min-width: 0;
   display: grid;
   gap: 2px;
 }
 .role__body strong {
   font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 .role__body span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.4;
 }
 .role__chevron {
-  color: var(--muted);
+  color: var(--normal);
+}
+.landing .role__chevron svg {
+  width: 20px;
+  height: 20px;
 }
 
+/* --- buttons --- */
 .btn {
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
   font: 600 16px var(--font-ui);
   cursor: pointer;
+  transition:
+    background-color 150ms ease-out,
+    opacity 150ms ease-out,
+    transform 150ms ease-out;
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+.btn.is-loading::before {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  vertical-align: -3px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .btn--primary {
-  background: var(--priority);
-  color: #06210f;
-  border-color: transparent;
+  background: var(--brand);
+  color: var(--on-solid);
+}
+.btn--primary:hover {
+  background: #3a3a3c;
 }
 .btn--secondary {
   background: var(--surface-2);
   color: var(--text);
+  border-color: var(--border);
+}
+.btn--secondary:hover {
+  background: #f5f5f7;
 }
 .btn--danger {
-  background: var(--danger);
-  color: var(--text);
-  border-color: transparent;
+  background: var(--danger-strong);
+  color: var(--on-solid); /* 7.9:1 */
+}
+.btn--danger:hover {
+  background: #8c000e;
 }
 
 /* --- topbar --- */
 .topbar {
+  position: relative;
+  z-index: 1; /* above the driver map, which is positioned behind the whole view */
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  flex-shrink: 0;
+  width: var(--col-inner);
+  margin: 8px auto 0;
+  padding: 6px 8px 6px 6px;
+  border-radius: var(--radius-pill);
 }
 .topbar h2 {
   flex: 1;
-  font-size: 16px;
-  letter-spacing: 0.04em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 .btn-back {
-  background: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.7);
   border: none;
+  box-shadow: var(--glass-highlight), 0 0 0 1px var(--glass-hairline), 0 1px 3px rgb(0 0 0 / 0.08);
   color: var(--text);
-  font-size: 22px;
-  padding: 4px 8px;
   cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+.btn-back:hover,
+.btn-back:active {
+  background: var(--surface-2);
+}
+.topbar .btn-back svg {
+  width: 22px;
+  height: 22px;
 }
 
+/* Status chip: dot + label. JS swaps pill--online / pill--offline. */
 .pill {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font: 600 12px var(--font-mono);
-  background: var(--normal);
-  color: var(--bg);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 6px 12px 6px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--chip);
+  color: var(--text);
+  font: 600 13px var(--font-ui);
   white-space: nowrap;
 }
-.pill--priority,
-.pill--online {
+.pill::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--normal);
+}
+.pill--online::before {
   background: var(--priority);
 }
 .pill--offline {
+  color: var(--danger-strong);
+}
+.pill--offline::before {
   background: var(--offline);
-  color: var(--text);
 }
 
 /* --- driver setup form --- */
@@ -229,14 +358,19 @@ body {
 .panel-form:not([hidden]) {
   display: grid;
   grid-template-columns: minmax(0, 1fr); /* keep wide inputs from stretching the column past the screen */
+  align-content: start;
   gap: 16px;
-  padding: 20px;
+  width: var(--col);
+  min-height: 0; /* lets the form scroll inside the 100dvh view */
+  margin: 0 auto;
+  padding: 24px var(--pad) 32px;
   overflow-y: auto;
 }
 .panel-form label {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
+  font-weight: 500;
   color: var(--muted);
 }
 .form-row {
@@ -252,192 +386,485 @@ body {
   width: 100%;
   min-width: 0;
 }
+.form-row + .form-error {
+  margin-top: 8px;
+}
 .mission {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
-  padding: 16px;
-  border-radius: 14px;
-  background: var(--surface);
-  border: 1px solid rgb(34 197 94 / 0.5);
+  gap: 12px;
 }
 .panel-form .mission__label {
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--text);
-  font: 600 15px var(--font-ui);
+  font: 600 16px var(--font-ui);
 }
-.mission__label svg {
+.mission .mission__label svg {
   width: 18px;
   height: 18px;
-  color: var(--priority);
+  color: var(--muted);
 }
 .panel-form .mission__input {
+  min-height: 56px;
   font: 600 22px var(--font-mono);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-align: center;
   text-transform: uppercase;
 }
 .mission__input::placeholder {
-  color: var(--border);
+  color: var(--normal);
 }
 .mission__hint {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
-.advanced {
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
+.mission__hint b {
+  font: 600 14px var(--font-mono);
+  color: var(--text);
 }
-.advanced summary {
+.toggle small {
+  display: block;
+  margin-top: 2px;
   color: var(--muted);
-  font-size: 13px;
-  cursor: pointer;
-}
-.advanced > * + * {
-  margin-top: 14px;
+  font-size: 14px;
+  font-weight: 400;
 }
 .form-error {
-  color: var(--danger);
+  color: var(--danger-strong); /* 7.9:1 on white */
   font-size: 14px;
+  font-weight: 600;
 }
 .form-error:empty {
   display: none;
 }
-.panel-form input,
+.panel-form input:not([type="checkbox"]),
 .panel-form select {
-  padding: 12px;
-  border-radius: 8px;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
   font: 16px var(--font-ui);
+  transition:
+    border-color 150ms ease-out,
+    box-shadow 150ms ease-out;
 }
-/* .panel-form prefix: `.panel-form label` (grid) would otherwise win and stack the checkbox above its text. */
-.panel-form .toggle {
-  flex-direction: row;
-  align-items: center;
+.panel-form select {
+  appearance: none;
+  padding-right: 36px;
+  background: var(--surface-2)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235e5e63' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    right 12px center / 18px no-repeat;
+}
+.panel-form input:not([type="checkbox"]):focus-visible,
+.panel-form select:focus-visible {
+  outline: none;
+  border-color: var(--ambulance);
+  box-shadow: 0 0 0 4px rgb(0 102 204 / 0.18);
+}
+.panel-form [aria-invalid="true"] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgb(215 0 21 / 0.12);
+}
+#btn-start {
+  margin-top: 8px;
+}
+
+/* Switch row: text left, iOS switch right. The input stays a real checkbox (role="switch"). */
+.toggle {
   display: flex;
-  gap: 10px;
-  font-size: 14px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  font-size: 16px;
+  color: var(--text);
+  cursor: pointer;
+}
+/* .panel-form prefix: `.panel-form label` (grid) would otherwise win and stack the switch under its text. */
+.panel-form .toggle {
+  display: flex;
+  font-size: 16px;
+  font-weight: 400;
   color: var(--text);
 }
-.toggle input {
-  width: 20px;
-  height: 20px;
+.switch {
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 51px;
+  height: 31px;
+  margin: 0;
+  border-radius: var(--radius-pill);
+  background: rgb(120 120 128 / 0.24);
+  cursor: pointer;
+  transition: background-color 200ms ease-out;
+}
+.switch::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.15), 0 1px 1px rgb(0 0 0 / 0.16);
+  transition: transform 200ms ease-out;
+}
+.switch:checked {
+  background: var(--priority);
+}
+.switch:checked::before {
+  transform: translateX(20px);
 }
 
 /* --- driver run --- */
+/* Full-bleed map behind the topbar and the floating sheet. */
 #driver-run:not([hidden]) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 #driver-map {
-  flex: 1;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
+  z-index: 0; /* own stacking context: Leaflet's pane z-indexes stay below the sheet and topbar */
   background: var(--bg);
 }
 .leaflet-container {
   font-family: var(--font-ui);
 }
 .map-tiles {
-  filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%) saturate(40%);
+  filter: saturate(55%) contrast(95%) brightness(103%);
+}
+#driver-map .leaflet-top {
+  top: calc(env(safe-area-inset-top) + 72px); /* clear the floating topbar */
+}
+#driver-map .leaflet-right .leaflet-control {
+  margin-right: calc(var(--pad) + env(safe-area-inset-right));
+}
+#driver-map .leaflet-bar {
+  border: none;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--surface);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-highlight), 0 0 0 1px var(--glass-hairline), var(--glass-shadow);
+}
+#driver-map .leaflet-bar a {
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+  background: transparent;
+  color: var(--text);
+  border-bottom-color: var(--border);
+  font: 400 22px/44px var(--font-ui);
+}
+#driver-map .leaflet-control-attribution {
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.8);
+  color: var(--muted);
+  font-size: 11px;
 }
 
-.hud-card {
-  padding: 16px;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
+/* Floating bottom sheet, centred in the app column whatever the window width. */
+.sheet {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--pad) + env(safe-area-inset-bottom));
+  width: var(--col-inner);
+  margin: 0 auto;
   display: grid;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 24px;
+  background: var(--surface-strong); /* the HUD carries body text over a busy map */
+}
+
+/* Driver HUD: one state pill + one big ETA value, readable at a glance from a dashboard mount. */
+.hud {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); /* the nowrap name would otherwise widen the page past the screen */
+  gap: 4px;
+}
+.hud__state {
+  display: flex;
+  align-items: center;
   gap: 6px;
-}
-.hud-card .pill {
   justify-self: start;
+  margin-bottom: 8px;
+  padding: 6px 14px 6px 8px;
+  border-radius: var(--radius-pill);
+  font: 600 15px var(--font-ui);
+  background: var(--chip);
+  color: var(--text);
+  transition:
+    background-color 200ms ease-out,
+    color 200ms ease-out;
 }
-.hud-card__name {
-  font-size: 15px;
+.hud .hud__light {
+  width: 20px;
+  height: 20px;
 }
-.hud-card__distance {
-  font: 600 22px var(--font-mono);
+.hud__light circle {
+  fill: none;
+}
+.hud[data-state="wait"] .hud__state {
+  background: var(--wait);
+  color: var(--text); /* 8:1 on amber */
+}
+.hud[data-state="wait"] .hud__light circle:nth-of-type(2),
+.hud[data-state="green"] .hud__light circle:nth-of-type(3) {
+  fill: currentColor;
+}
+.hud[data-state="green"] .hud__state {
+  background: var(--priority);
+  color: var(--on-solid);
+}
+.hud[data-state="ended"] .hud__state {
+  background: var(--offline);
+  color: var(--on-solid);
+}
+.hud__label {
   color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+/* One line only: clamp keeps "1 mnt 42 dtk" inside a 320px phone, ellipsis is the last resort. */
+.hud__eta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 clamp(32px, 10vw, 44px) / 1.1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+}
+.hud[data-state="green"] .hud__eta {
+  color: var(--priority);
+}
+.hud__meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.hud__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hud__distance {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+}
+.hud__hint {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.hud:is([data-state="idle"], [data-state="ended"]) :is(.hud__label, .hud__eta, .hud__meta) {
+  display: none;
+}
+.hud:is([data-state="idle"], [data-state="ended"]) .hud__hint {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 #btn-stop {
-  border-radius: 0;
+  width: 100%;
 }
 
-/* --- citizen alert --- */
-/* Glanceable from a phone mount: one big state, no map. Danger flashes red/blue like a siren. */
+/* --- citizen --- */
+/* Glanceable from a phone mount: one calm card when safe; the whole screen flashes red/blue when a vehicle closes in. */
 .citizen {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 24px 16px;
+  gap: 12px;
+  padding: 16px var(--pad);
+  overflow-y: auto;
   text-align: center;
+  text-wrap: balance;
+}
+/* The section stays full width so the danger flash covers the screen even without :has; its content keeps the column. */
+.citizen > * {
+  max-width: calc(480px - 2 * var(--pad));
 }
 .citizen p:empty {
   display: none;
 }
-.citizen__arrow {
-  font: 700 clamp(96px, 40vw, 200px) / 1 var(--font-ui);
+.citizen__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 32px 24px 24px;
+  border-radius: 24px;
+  background: var(--surface-2);
+  box-shadow: var(--card-shadow);
+}
+.citizen__icon[data-icon=""],
+.citizen__icon:not([data-icon="safe"]) .citizen__svg-check,
+.citizen__icon[data-icon="safe"] .citizen__svg-arrow {
+  display: none;
+}
+.citizen__icon svg {
+  display: block;
+  width: clamp(120px, 40vw, 200px);
+  height: clamp(120px, 40vw, 200px);
+}
+.citizen__icon .citizen__svg-check {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 8px;
+  color: var(--priority);
+}
+.citizen__icon[data-icon="right"] svg {
+  transform: rotate(90deg);
+}
+.citizen__icon[data-icon="back"] svg {
+  transform: rotate(180deg);
+}
+.citizen__icon[data-icon="left"] svg {
+  transform: rotate(-90deg);
+}
+.citizen__headline {
+  display: grid;
+  gap: 8px;
 }
 .citizen__title {
-  font: 700 clamp(22px, 7vw, 36px) var(--font-ui);
-  letter-spacing: 0.04em;
+  font: 700 clamp(28px, 8vw, 32px) / 1.1 var(--font-ui);
+  letter-spacing: -0.025em;
 }
 .citizen__direction {
-  font: 700 clamp(26px, 9vw, 44px) var(--font-ui);
+  font: 700 clamp(26px, 9vw, 44px) / 1.1 var(--font-ui);
+  letter-spacing: -0.01em;
 }
 .citizen__distance {
-  font: 700 clamp(56px, 22vw, 112px) / 1 var(--font-mono);
+  font: 700 clamp(56px, 22vw, 112px) / 1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
 }
 .citizen__detail {
   color: var(--muted);
   font-size: 16px;
 }
-.citizen--safe .citizen__arrow {
+.citizen--safe .citizen__title {
   color: var(--priority);
 }
+.citizen__help {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.citizen__hint {
+  width: 100%;
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.citizen__eta {
+  font: 600 17px var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Danger: solid red/blue, never glass. The card wrapper turns into plain layout. */
 .citizen--danger {
   color: #fff;
   animation: siren 1s steps(1) infinite;
 }
+.citizen--danger .citizen__card {
+  width: auto;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+}
 .citizen--danger .citizen__detail {
   color: #fff;
   font: 700 clamp(20px, 6vw, 28px) var(--font-ui);
-  padding: 10px 18px;
-  border: 3px solid #fff;
-  border-radius: 12px;
+  padding: 10px 20px;
+  border: 2px solid #fff;
+  border-radius: var(--radius-pill);
+}
+/* Where :has is supported, flash the whole view so the alert reads full-screen behind the bars. */
+#view-citizen:has(.citizen--danger) {
+  animation: siren 1s steps(1) infinite;
+}
+#view-citizen:has(.citizen--danger) :is(.topbar, .citizen__bar) {
+  background: rgb(255 255 255 / 0.94); /* keep bar text >= 4.5:1 over the flashing colours */
 }
 /* 2 flashes per second: below the 3/s photosensitivity limit. */
 @keyframes siren {
   0% {
-    background: #b91c1c;
+    background-color: var(--danger-strong);
   }
   50% {
-    background: #1e3a8a;
+    background-color: var(--ambulance);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .citizen--danger {
+  .citizen--danger,
+  #view-citizen:has(.citizen--danger) {
     animation: none;
-    background: #b91c1c;
+    background-color: var(--danger-strong);
+  }
+  .btn.is-loading::before {
+    animation: none;
+  }
+  *,
+  *::before {
+    transition: none !important;
   }
 }
-.citizen__source {
-  padding: 0 16px 12px;
-  background: var(--surface);
-  color: var(--muted);
-  font: 12px var(--font-mono);
+
+.citizen__bar {
+  flex-shrink: 0;
+  width: var(--col-inner);
+  margin: 0 auto 16px;
+  padding: 4px 16px 12px;
 }
-.citizen__sim {
-  padding: 12px 16px;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
+.citizen__source {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* --- glass fallbacks (keep last) --- */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  #driver-map .leaflet-bar {
+    background: rgb(255 255 255 / 0.95);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  #driver-map .leaflet-bar {
+    background: #fff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }

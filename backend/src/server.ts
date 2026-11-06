@@ -6,7 +6,7 @@ import { config, intersections } from './config.ts';
 import { publishDemo, type DemoDeps } from './demo-api.ts';
 import { DemoRunner } from './demo.ts';
 import { PriorityEngine, type Command } from './priority.ts';
-import { ingestGps, publishCommands, type Publish } from './publish.ts';
+import { ingestGps, publishCommands, removeVehicle, type Publish } from './publish.ts';
 import { createRoute } from './route.ts';
 
 const client = connect(config.mqttUrl, {
@@ -41,6 +41,7 @@ const publicConfig: PublicConfig = {
   radiusM: config.radiusM,
   staleS: config.staleS,
   simSpeedKmh: demo.settings.speedKmh,
+  etaLeadS: config.etaLeadS,
 };
 
 // Overwrite any retained PRIORITY left over from a previous run, and any demo settings from another server.
@@ -51,7 +52,9 @@ publishDemo(publish, publicConfig, demo, Date.now());
 setInterval(() => publishCommands(publish, config.topicPrefix, engine.tick(Date.now())), config.refreshS * 1000);
 setInterval(() => {
   const now = Date.now();
-  for (const gps of demo.runner.tick(now)) ingestGps(publish, engine, config.topicPrefix, gps, now);
+  const { fixes, arrived } = demo.runner.tick(now);
+  for (const gps of fixes) ingestGps(publish, engine, config.topicPrefix, gps, now);
+  for (const id of arrived) removeVehicle(publish, engine, config.topicPrefix, id, now);
 }, 1000);
 
 const app = createApp({
@@ -63,6 +66,7 @@ const app = createApp({
   publicConfig,
   dashboardDir: path.join(import.meta.dirname, '../../dashboard'),
   mobileDir: path.join(import.meta.dirname, '../../mobile'),
+  landingDir: path.join(import.meta.dirname, '../../landing'),
 });
 
 app.listen(config.port, (err) => {

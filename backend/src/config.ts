@@ -1,10 +1,12 @@
 import type { Intersection } from './contract.ts';
 
-function numberEnv(name: string, fallback: number): number {
+function numberEnv(name: string, fallback: number, allowZero = false): number {
   const raw = process.env[name];
   if (raw === undefined || raw === '') return fallback;
   const value = Number(raw);
-  if (!Number.isFinite(value) || value <= 0) throw new Error(`env ${name} must be a positive number, got "${raw}"`);
+  if (!Number.isFinite(value) || value < 0 || (value === 0 && !allowZero)) {
+    throw new Error(`env ${name} must be a ${allowZero ? 'non-negative' : 'positive'} number, got "${raw}"`);
+  }
   return value;
 }
 
@@ -20,6 +22,8 @@ export const config = {
   ttlS: numberEnv('TTL_S', 15),
   refreshS: numberEnv('REFRESH_S', 5),
   staleS: numberEnv('STALE_S', 15),
+  // Predictive trigger (ETA model): green once the predicted arrival is this close. 0 = radius-only trigger.
+  etaLeadS: numberEnv('ETA_LEAD_S', 40, true),
   // ponytail: static list of mission codes. Production: per-trip tokens issued by Command Center 112 / the referring
   // hospital, bound to one vehicleId and expiring when the trip ends.
   // Stored uppercase: the driver app uppercases what is typed.

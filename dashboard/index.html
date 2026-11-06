@@ -7,48 +7,75 @@
     <link rel="icon" href="data:," />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=20261106h" />
   </head>
   <body>
     <main class="layout">
       <div id="map" role="region" aria-label="Peta Jember"></div>
-      <aside class="panel">
+      <aside class="panel glass">
         <header class="panel__header">
-          <div>
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2.5" width="8" height="19" rx="4" /><circle cx="12" cy="7.5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="16.5" r="1.5" /></svg>
+          </span>
+          <div class="brand">
             <h1>SIREN</h1>
             <p>Command Center · Jember</p>
           </div>
-          <div class="panel__actions">
-            <button id="demo-toggle" class="btn-ghost" aria-controls="demo-panel" aria-expanded="false">Panel Demo</button>
-            <span id="mqtt-status" class="pill pill--offline" role="status">MQTT terputus</span>
-          </div>
+          <span id="mqtt-status" class="live live--off" role="status">
+            <span class="live__dot" aria-hidden="true"></span><span class="live__text">Menghubungkan…</span>
+          </span>
         </header>
-        <section>
-          <h2>Simpang</h2>
-          <ul id="intersections" class="list"></ul>
+
+        <section aria-labelledby="flow-title">
+          <h2 id="flow-title">Cara kerja</h2>
+          <ol class="flow">
+            <li id="step-gps" class="flow__step">
+              <span class="flow__num" aria-hidden="true">1</span>
+              <span><b>Ambulans mengirim GPS</b><small>tiap 1 detik dari aplikasi driver</small></span>
+            </li>
+            <li id="step-ai" class="flow__step">
+              <span class="flow__num" aria-hidden="true">2</span>
+              <span><b>AI memprediksi waktu tiba</b><small id="step-ai-sub">model ETA, di dalam radius simpang</small></span>
+            </li>
+            <li id="step-green" class="flow__step">
+              <span class="flow__num" aria-hidden="true">3</span>
+              <span><b>Lampu simpang jadi hijau</b><small id="step-green-sub">kembali normal setelah kendaraan lewat</small></span>
+            </li>
+          </ol>
         </section>
-        <section>
-          <h2>Kendaraan</h2>
+
+        <section aria-labelledby="vehicles-title">
+          <div class="section-head">
+            <h2 id="vehicles-title">Kendaraan &amp; prediksi AI</h2>
+            <button id="demo-toggle" class="btn-ghost" aria-controls="demo-panel" aria-expanded="false">Panel Demo</button>
+          </div>
           <ul id="vehicles" class="list"></ul>
         </section>
-        <section class="log">
-          <h2>Log Kejadian</h2>
+
+        <section aria-labelledby="junctions-title">
+          <h2 id="junctions-title">Simpang bersinyal</h2>
+          <ul id="intersections" class="list list--compact"></ul>
+        </section>
+
+        <section class="log" aria-labelledby="log-title">
+          <h2 id="log-title">Log kejadian</h2>
           <ol id="log" aria-live="polite"></ol>
         </section>
       </aside>
 
-      <aside id="demo-panel" class="demo" aria-label="Panel Demo" hidden>
+      <aside id="demo-panel" class="demo glass" aria-label="Panel Demo" hidden>
         <header class="demo__header">
           <h2>Panel Demo</h2>
-          <button id="demo-close" class="btn-ghost" aria-label="Tutup">✕</button>
+          <button id="demo-close" class="btn-ghost" aria-label="Tutup Panel Demo">Tutup</button>
         </header>
         <form id="demo-key-form" class="demo__row">
-          <input id="demo-key" type="password" placeholder="Kunci demo" autocomplete="current-password" required />
+          <input id="demo-key" type="password" placeholder="Kunci demo" aria-label="Kunci demo" autocomplete="current-password" required />
           <button class="btn">Buka</button>
         </form>
         <p id="demo-msg" class="demo__msg" role="alert"></p>
+        <p class="demo__hint" id="demo-key-hint">Kunci hanya untuk pengaturan lanjutan (kode misi, radius, posisi warga, reset). Untuk mencoba, tutup panel ini dan tekan <strong>Mulai demo</strong>.</p>
 
         <div id="demo-body" hidden>
           <section>
@@ -95,7 +122,7 @@
             <h3>Kode misi</h3>
             <ul id="demo-codes" class="demo__codes"></ul>
             <form id="demo-code-form" class="demo__row">
-              <input id="demo-code" type="text" placeholder="AMB-JBR-07" maxlength="64" pattern="[A-Za-z0-9_\-]{1,64}" required />
+              <input id="demo-code" type="text" placeholder="AMB-JBR-07" aria-label="Kode misi baru" maxlength="64" pattern="[A-Za-z0-9_\-]{1,64}" required />
               <button class="btn">Tambah</button>
             </form>
           </section>
@@ -108,6 +135,6 @@
       </aside>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=20261106h"></script>
   </body>
 </html>

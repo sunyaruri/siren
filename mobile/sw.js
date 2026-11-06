@@ -1,4 +1,4 @@
-const CACHE = "siren-mobile-v8";
+const CACHE = "siren-mobile-v14";
 const SHELL = [
   "./",
   "index.html",
@@ -13,7 +13,9 @@ const SHELL = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
+  // `reload`: skip the browser HTTP cache, which the CDN tells to keep files for hours.
+  const fresh = SHELL.map((url) => new Request(url, { cache: "reload" }));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(fresh)));
   self.skipWaiting();
 });
 
@@ -30,12 +32,14 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || url.pathname.includes("/api/")) return;
   event.respondWith(
-    fetch(event.request)
+    // `no-cache`: revalidate with the server instead of trusting the HTTP cache (see install). Navigations cannot take
+    // a RequestInit (TypeError), and HTML is already served no-cache.
+    (event.request.mode === "navigate" ? fetch(event.request) : fetch(event.request, { cache: "no-cache" }))
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((cache) => cache.put(event.request, copy));
         return res;
       })
-      .catch(() => caches.match(event.request)),
+      .catch(() => caches.match(event.request, { ignoreSearch: true })),
   );
 });

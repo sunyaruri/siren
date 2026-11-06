@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createApp } from './app.ts';
+import { MAX_PUBLIC_RUNS } from './demo-api.ts';
 import { DemoRunner } from './demo.ts';
 import type { Publish } from './publish.ts';
 import { createRoute } from './route.ts';
@@ -22,7 +23,7 @@ const engineOpts = { radiusM: 1000, passM: 50, passHysteresisM: 20, ttlS: 15, st
 const app = createApp({
   engine: new PriorityEngine([X], engineOpts),
   publish,
-  publicConfig: { topicPrefix: 'test', mqttWsUrl: 'wss://example.invalid/mqtt', radiusM: 1000, staleS: 15, simSpeedKmh: 60 },
+  publicConfig: { topicPrefix: 'test', mqttWsUrl: 'wss://example.invalid/mqtt', radiusM: 1000, staleS: 15, simSpeedKmh: 60, etaLeadS: 40 },
   intersections: [X],
   missionCodes: new Set(['CODE-1']),
   demo: {
@@ -84,7 +85,19 @@ test('POST /api/gps publishes vehicle + retained PRIORITY and returns nextInters
   await postGps(JSON.stringify({ vehicleId: 'AMB-01', type: 'ambulance', lat: lat(-1100), lng: 0 }));
   const res = await postGps(JSON.stringify({ vehicleId: 'AMB-01', type: 'ambulance', lat: lat(-990), lng: 0, speed: 60 }));
   assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), { nextIntersection: { id: 'X', name: 'Test', distanceM: 990, mode: 'PRIORITY' } });
+  const { nextIntersection } = (await res.json()) as { nextIntersection: { etaS: number } };
+  assert.ok(nextIntersection.etaS > 0 && nextIntersection.etaS < 600, `etaS ${nextIntersection.etaS}`);
+  assert.deepEqual(nextIntersection, { id: 'X', name: 'Test', distanceM: 990, mode: 'PRIORITY', etaS: nextIntersection.etaS });
+  assert.deepEqual(published[1].payload, {
+    vehicleId: 'AMB-01',
+    type: 'ambulance',
+    lat: lat(-990),
+    lng: 0,
+    speed: 60,
+    nextId: 'X',
+    etaS: nextIntersection.etaS,
+    ts: (published[1].payload as { ts: number }).ts,
+  });
   assert.deepEqual(
     published.map((p) => [p.topic, p.retain]),
     [
@@ -94,6 +107,12 @@ test('POST /api/gps publishes vehicle + retained PRIORITY and returns nextInters
     ],
   );
   assert.equal((published[2].payload as { mode: string }).mode, 'PRIORITY');
+});
+
+test('static files are served with Cache-Control: no-cache', async () => {
+  const res = await fetch(`${base}/dashboard/geo.ts`); // dashboardDir is src/ in these tests
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('cache-control'), 'no-cache');
 });
 
 test('GET /api/intersections, /api/config and /api/route', async () => {
@@ -116,7 +135,7 @@ test('serves /.well-known/assetlinks.json from the dashboard dir (Android TWA ve
   const wellKnownApp = createApp({
     engine: new PriorityEngine([X], { radiusM: 1000, passM: 50, passHysteresisM: 20, ttlS: 15, staleS: 15 }),
     publish,
-    publicConfig: { topicPrefix: 'test', mqttWsUrl: 'wss://example.invalid/mqtt', radiusM: 1000, staleS: 15, simSpeedKmh: 60 },
+    publicConfig: { topicPrefix: 'test', mqttWsUrl: 'wss://example.invalid/mqtt', radiusM: 1000, staleS: 15, simSpeedKmh: 60, etaLeadS: 40 },
     intersections: [X],
     missionCodes: new Set(),
     dashboardDir: dir,
@@ -170,7 +189,7 @@ test('POST /api/demo/run starts a vehicle; reset parks it at its start and publi
   );
   published.length = 0;
   const reset = (await (await demoApi('POST', '/reset')).json()) as { runs: { alongM: number; paused: boolean }[] };
-  assert.deepEqual(reset.runs, [{ vehicleId: 'DMK-SIM1', type: 'firetruck', alongM: 100, speedKmh: 60, paused: true }]);
+  assert.deepEqual(reset.runs, [{ vehicleId: 'DMK-SIM1', type: 'firetruck', alongM: 100, speedKmh: 60, paused: true, arrived: false }]);
   assert.deepEqual(
     published.map((p) => p.topic),
     ['test/vehicle/DMK-SIM1', 'test/intersection/X/cmd', 'test/demo'],
@@ -217,4 +236,15 @@ test('POST /api/mission/end releases the vehicle at once and publishes gone', as
       ['test/vehicle/AMB-END', true],
     ],
   );
+});
+
+test('POST /api/demo/quick-run needs no key, is capped, and the rest of the panel stays locked', async () => {
+  await demoApi('POST', '/clear');
+  const quick = () => fetch(`${base}/api/demo/quick-run`, { method: 'POST' });
+  for (let i = 0; i < MAX_PUBLIC_RUNS; i++) assert.equal((await quick()).status, 201);
+  assert.equal((await quick()).status, 429, 'cap reached');
+  assert.equal((await fetch(`${base}/api/demo/clear`, { method: 'POST' })).status, 401, 'clear still needs the key');
+  await demoApi('POST', '/clear');
+  assert.equal((await quick()).status, 201, 'room again after clearing');
+  await demoApi('POST', '/clear');
 });

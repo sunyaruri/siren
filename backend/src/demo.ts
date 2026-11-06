@@ -22,6 +22,8 @@ export interface RunStatus {
   alongM: number;
   speedKmh: number;
   paused: boolean;
+  /** Reached the end of the route: off the map, kept in the list so Reset can replay it. */
+  arrived: boolean;
 }
 
 type Parsed<T> = { ok: true; value: T } | { ok: false; fields: string[] };
@@ -72,6 +74,7 @@ interface Run {
   alongM: number;
   /** null = paused. */
   movingSince: number | null;
+  arrived: boolean;
 }
 
 /**
@@ -91,7 +94,7 @@ export class DemoRunner {
   start(type: VehicleType, startM: number, speedKmh: number, now: number): string {
     this.#count += 1;
     const vehicleId = `${type === 'ambulance' ? 'AMB' : 'DMK'}-SIM${this.#count}`;
-    this.#runs.set(vehicleId, { type, startM, speedKmh, alongM: startM, movingSince: now });
+    this.#runs.set(vehicleId, { type, startM, speedKmh, alongM: startM, movingSince: now, arrived: false });
     return vehicleId;
   }
 
@@ -103,7 +106,7 @@ export class DemoRunner {
   }
 
   resumeAll(now: number): void {
-    for (const run of this.#runs.values()) run.movingSince ??= now;
+    for (const run of this.#runs.values()) if (!run.arrived) run.movingSince ??= now;
   }
 
   /** Puts every vehicle back at its start point, paused. Returns their ids (their trip has to be forgotten). */
@@ -111,28 +114,44 @@ export class DemoRunner {
     for (const run of this.#runs.values()) {
       run.alongM = run.startM;
       run.movingSince = null;
+      run.arrived = false;
     }
     return [...this.#runs.keys()];
   }
 
   /** Removes every vehicle and returns the ids that were running. */
+  /** Forgets runs that reached the end (already off the map), so public quick runs cannot pile up. */
+  dropArrived(): void {
+    for (const [id, run] of this.#runs) if (run.arrived) this.#runs.delete(id);
+  }
+
   removeAll(): string[] {
     const ids = [...this.#runs.keys()];
     this.#runs.clear();
     return ids;
   }
 
-  /** One GPS fix per vehicle. A run is dropped right after its fix at the end of the route. */
-  tick(now: number): GpsInput[] {
+  /**
+   * One GPS fix per vehicle still on the road. `arrived` lists the vehicles whose fix this tick was at the end of the
+   * route: their trip is over, so the caller removes them from the map (the run stays, parked, for Reset).
+   */
+  tick(now: number): { fixes: GpsInput[]; arrived: string[] } {
     const fixes: GpsInput[] = [];
+    const arrived: string[] = [];
     for (const [vehicleId, run] of this.#runs) {
+      if (run.arrived) continue;
       const alongM = this.#alongM(run, now);
       const { pos, heading } = this.#route.pointAt(alongM);
       const speed = run.movingSince === null ? 0 : run.speedKmh;
       fixes.push({ vehicleId, type: run.type, lat: pos.lat, lng: pos.lng, speed, heading });
-      if (alongM >= this.#route.totalM) this.#runs.delete(vehicleId);
+      if (alongM >= this.#route.totalM) {
+        run.arrived = true;
+        run.alongM = this.#route.totalM;
+        run.movingSince = null;
+        arrived.push(vehicleId);
+      }
     }
-    return fixes;
+    return { fixes, arrived };
   }
 
   list(now: number): RunStatus[] {
@@ -142,6 +161,7 @@ export class DemoRunner {
       alongM: Math.round(Math.min(this.#alongM(run, now), this.#route.totalM)),
       speedKmh: run.speedKmh,
       paused: run.movingSince === null,
+      arrived: run.arrived,
     }));
   }
 

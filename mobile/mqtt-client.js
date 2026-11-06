@@ -45,3 +45,16 @@ export function bearingDeg(lat1, lng1, lat2, lng2) {
     Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
+
+/** "24 dtk" or "1 mnt 20 dtk" for an ETA in seconds. */
+export function formatEta(s) {
+  const total = Math.max(0, Math.round(s));
+  if (total < 60) return `${total} dtk`;
+  const min = `${Math.floor(total / 60)} mnt`;
+  return total % 60 ? `${min} ${total % 60} dtk` : min;
+}
+
+/** Sets text only when it changed, so aria-live regions are not re-announced on every 1 s update. */
+export function setText(node, text) {
+  if (node.textContent !== text) node.textContent = text;
+}

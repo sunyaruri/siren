@@ -12,6 +12,8 @@ export interface PublicConfig {
   staleS: number;
   /** Speed of the driver PWA's route simulator; set from the Panel Demo. */
   simSpeedKmh: number;
+  /** Predictive trigger threshold (s); 0 = radius only. Lets the dashboard explain when green opens. */
+  etaLeadS: number;
 }
 
 export interface AppDeps {
@@ -25,6 +27,8 @@ export interface AppDeps {
   demo?: DemoDeps;
   dashboardDir: string;
   mobileDir?: string;
+  /** Public landing page served at `/`; the dashboard then lives at `/dashboard/`. */
+  landingDir?: string;
 }
 
 // ponytail: open CORS, auth is the mission code header, not the origin; restrict origins before any real deployment.
@@ -59,6 +63,7 @@ export function createApp({
   demo,
   dashboardDir,
   mobileDir,
+  landingDir,
 }: AppDeps): express.Express {
   const app = express();
 
@@ -115,10 +120,14 @@ export function createApp({
 
   if (demo) app.use('/api/demo', demoRouter({ demo, engine, publish, publicConfig, intersections, missionCodes }));
 
-  if (mobileDir) app.use('/mobile', express.static(mobileDir));
+  // Revalidate on every load (cheap: ETag + 304). The CDN in front otherwise lets browsers keep a stale app.js for hours
+  // after a deploy, which mixes a new index.html with old modules.
+  const fresh = { setHeaders: (res: express.Response) => res.set('Cache-Control', 'no-cache') };
+  if (mobileDir) app.use('/mobile', express.static(mobileDir, fresh));
   // express.static hides dotfiles by default; Android TWA verification needs /.well-known/assetlinks.json.
-  app.use('/.well-known', express.static(`${dashboardDir}/.well-known`));
-  app.use(express.static(dashboardDir));
+  app.use('/.well-known', express.static(`${dashboardDir}/.well-known`, fresh));
+  app.use('/dashboard', express.static(dashboardDir, fresh));
+  if (landingDir) app.use(express.static(landingDir, fresh));
   app.use(onError);
   return app;
 }

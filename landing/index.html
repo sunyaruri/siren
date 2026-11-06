@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SIREN · Lampu hijau untuk ambulans, sebelum ia tiba</title>
+    <meta
+      name="description"
+      content="SIREN memprediksi kapan ambulans dan pemadam tiba di simpang, lalu membuka lampu hijau untuk jalurnya. Warga di sekitar mendapat peringatan di HP."
+    />
+    <meta name="theme-color" content="#eef0f3" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="SIREN · Lampu hijau untuk ambulans, sebelum ia tiba"
+    />
+    <meta
+      property="og:description"
+      content="AI memprediksi waktu tiba ambulans dan pemadam di simpang, lalu membuka lampu hijau untuk jalurnya. Warga di sekitar mendapat peringatan di HP."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d1d1f'/%3E%3Crect x='11' y='5' width='10' height='22' rx='5' fill='none' stroke='%23fff' stroke-width='1.75'/%3E%3Ccircle cx='16' cy='10.5' r='2' fill='%23fff' fill-opacity='.45'/%3E%3Ccircle cx='16' cy='16' r='2' fill='%23fff' fill-opacity='.45'/%3E%3Ccircle cx='16' cy='21.5' r='2.2' fill='%2330d158'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css?v=20261106g" />
+    <script type="module" src="app.js?v=20261106g"></script>
+  </head>
+  <body>
+    <a class="skip" href="#isi">Lewati ke konten</a>
+
+    <header class="site-header">
+      <div class="wrap">
+        <div class="site-header__bar glass">
+          <a class="brand" href="#isi" aria-label="SIREN, ke awal halaman">
+            <span class="brand__mark" aria-hidden="true">
+              <svg viewBox="0 0 32 32">
+                <rect
+                  class="brand__housing"
+                  x="11"
+                  y="5"
+                  width="10"
+                  height="22"
+                  rx="5"
+                />
+                <circle class="brand__lamp" cx="16" cy="10.5" r="2" />
+                <circle class="brand__lamp" cx="16" cy="16" r="2" />
+                <circle
+                  class="brand__lamp brand__lamp--go"
+                  cx="16"
+                  cy="21.5"
+                  r="2.2"
+                />
+              </svg>
+            </span>
+            <span class="brand__name">SIREN</span>
+          </a>
+          <nav class="site-nav" aria-label="Navigasi halaman">
+            <a href="#cara-kerja">Cara kerja</a>
+            <a href="#ai">Teknologi AI</a>
+            <a href="#produk">Produk</a>
+            <a href="#keamanan">Keamanan</a>
+          </nav>
+          <a class="btn btn--primary btn--small" href="/dashboard/"
+            >Buka dashboard</a
+          >
+        </div>
+      </div>
+    </header>
+
+    <main id="isi">
+      <!-- Hero: the real demo map is the canvas, copy and a live vehicle card float over it as glass. -->
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero__map">
+          <img
+            src="img/map-hero.webp"
+            width="1920"
+            height="1080"
+            fetchpriority="high"
+            alt="Peta Kota Jember dengan rute demo ambulans dan zona hijau 1 km di sekitar simpang S1."
+          />
+        </div>
+        <div class="wrap hero__grid">
+          <div class="hero__panel glass">
+            <p class="pill">Prioritas sinyal untuk kendaraan darurat</p>
+            <h1 id="hero-title">
+              Lampu hijau untuk ambulans, sebelum ia tiba.
+            </h1>
+            <p class="lead">
+              SIREN memprediksi kapan ambulans dan pemadam tiba di simpang, lalu
+              membuka lampu hijau untuk jalurnya. Warga di sekitar mendapat
+              peringatan di HP.
+            </p>
+            <div class="actions">
+              <a class="btn btn--primary" href="/dashboard/">Buka dashboard</a>
+              <a class="btn btn--secondary" href="#demo">Lihat demo langsung</a>
+            </div>
+          </div>
+
+          <!-- Markup is the final frame (no JS / reduced motion); app.js animates it. -->
+          <figure id="live-card" class="live-card glass is-green">
+            <div
+              class="live-card__screen"
+              role="img"
+              aria-label="Simulasi kartu kendaraan di Command Center:ambulans AMB-01, prediksi AI tiba di simpang S1 dalam 38 detik, lampu S1 hijau untuk jalurnya."
+            >
+              <div class="live-card__top">
+                <p class="live-card__vehicle">
+                  AMB-01 <span class="pill pill--ambulance">Ambulans</span>
+                </p>
+                <span class="chip">Simulasi</span>
+              </div>
+              <p class="live-card__label">Prediksi AI tiba di S1</p>
+              <p class="live-card__eta">
+                <span id="live-eta" aria-hidden="true">38</span>
+                <span class="live-card__unit">dtk</span>
+              </p>
+              <div class="bar"><span id="live-bar"></span></div>
+              <p class="live-card__status">
+                <span class="live-card__dot"></span>
+                <span id="live-status">Lampu S1 hijau</span>
+              </p>
+              <ol class="live-steps">
+                <li data-step="1" class="is-on">GPS</li>
+                <li data-step="2" class="is-on">AI</li>
+                <li data-step="3" class="is-on">Hijau</li>
+              </ol>
+            </div>
+            <button
+              id="hero-pause"
+              class="live-card__pause"
+              type="button"
+              aria-label="Jeda animasi"
+              hidden
+            >
+              <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 6v12M15 6v12" />
+              </svg>
+              <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8 6l10 6-10 6z" />
+              </svg>
+            </button>
+          </figure>
+        </div>
+      </section>
+
+      <!-- System numbers: static values that match the backend defaults. -->
+      <section class="numbers" aria-labelledby="numbers-title">
+        <div class="wrap">
+          <h2 id="numbers-title" class="visually-hidden">Angka sistem</h2>
+          <dl class="numbers__list card">
+            <div class="numbers__cell">
+              <dt>Radius pemicu</dt>
+              <dd>1 km</dd>
+            </div>
+            <div class="numbers__cell">
+              <dt>Hijau dibuka saat prediksi tiba</dt>
+              <dd>≤ 40 dtk</dd>
+            </div>
+            <div class="numbers__cell">
+              <dt>Posisi GPS dikirim</dt>
+              <dd>tiap 1 dtk</dd>
+            </div>
+            <div class="numbers__cell">
+              <dt>Jeda aman jalur silang</dt>
+              <dd>3 dtk</dd>
+            </div>
+            <div class="numbers__cell">
+              <dt>Simpang di rute demo Jember</dt>
+              <dd>3</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- Problem -->
+      <section id="masalah" class="section" aria-labelledby="masalah-title">
+        <div class="wrap">
+          <p class="label">Masalah</p>
+          <h2 id="masalah-title">Setiap menit menentukan.</h2>
+          <div class="grid-2">
+            <article class="card">
+              <h3>Waktu tanggap menentukan nyawa</h3>
+              <p>
+                Waktu tanggap adalah penentu utama kematian akibat trauma
+                sebelum tiba di rumah sakit. Di kota-kota Indonesia,
+                keterlambatan ambulans sebagian besar menumpuk di antrean lampu
+                merah.
+              </p>
+              <p class="source">
+                Sumber: Chen et al. (2026); Wiwekananda et al. (2020).
+              </p>
+            </article>
+            <article class="card">
+              <h3>Simpang adalah titik paling berbahaya</h3>
+              <p>
+                Sirine tidak memberi tahu arah. Pengendara lain bisa bingung dan
+                panik. Kasus nyata: ambulans menabrak pemotor di Bali,
+                kecelakaan maut di Tol Pekanbaru–Dumai, pejalan kaki tertabrak
+                di Pinrang, dan tabrakan di Purworejo.
+              </p>
+              <p class="source">
+                Sumber: detikbali (2022); MEDIA CENTER (2026); kumparanNEWS
+                (2026); tvOne (2026).
+              </p>
+            </article>
+            <article class="card">
+              <h3>Sopir terjepit di antara dua aturan</h3>
+              <p>
+                UU No. 22 Tahun 2009 memberi kendaraan darurat hak utama di
+                jalan. Tetapi sopir tetap bisa dipidana lewat Pasal 310 UU LLAJ
+                bila menerobos simpang dan terjadi kecelakaan.
+              </p>
+              <p class="source">Sumber: Pemerintah Pusat Indonesia (2009).</p>
+            </article>
+            <article class="card">
+              <h3>Sudah terbukti di tempat lain</h3>
+              <p>
+                Kota Suwon, Korea Selatan, memakai GPS armada untuk membuka
+                lampu hijau dari pusat kendali. Hasilnya: waktu tempuh turun
+                hingga 56% dan kecepatan operasional naik lebih dari 80%.
+              </p>
+              <p class="source">
+                Sumber: Seoul Economic Daily (2026); SUWONILBO (2023, 2024).
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- How it works -->
+      <section id="cara-kerja" class="section" aria-labelledby="cara-title">
+        <div class="wrap">
+          <p class="label">Cara kerja</p>
+          <h2 id="cara-title">Dari GPS sampai lampu hijau, otomatis.</h2>
+          <ol class="steps">
+            <li class="card step">
+              <span class="step__n" aria-hidden="true">1</span>
+              <h3>GPS tiap 1 detik</h3>
+              <p>Aplikasi sopir mengirim posisi dan kecepatan ke server.</p>
+            </li>
+            <li class="card step">
+              <span class="step__n" aria-hidden="true">2</span>
+              <h3>AI memprediksi waktu tiba</h3>
+              <p>
+                Server menghitung berapa detik lagi kendaraan sampai di simpang
+                berikutnya.
+              </p>
+            </li>
+            <li class="card step">
+              <span class="step__n step__n--go" aria-hidden="true">3</span>
+              <h3>Lampu hijau tepat waktu</h3>
+              <p>
+                Saat kendaraan berada dalam 1 km, terus mendekat, dan prediksi
+                tiba ≤ 40 detik, jalurnya hijau. Jalur silang diberi kuning 3
+                detik dulu, lalu merah.
+              </p>
+            </li>
+            <li class="card step">
+              <span class="step__n" aria-hidden="true">4</span>
+              <h3>Kembali normal setelah lewat</h3>
+              <p>
+                Begitu kendaraan melewati simpang, lampu kembali ke siklus
+                biasa. Jalur yang tadi menunggu mendapat giliran hijau
+                berikutnya (setelah kuning 3 detik).
+              </p>
+            </li>
+          </ol>
+          <div class="card note">
+            <svg
+              class="icon icon--danger"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+              <path
+                d="M12 8v4M12 15.5v.01M2.5 9a8 8 0 0 0 0 6M21.5 9a8 8 0 0 1 0 6"
+              />
+            </svg>
+            <p>
+              Sementara itu, HP warga dalam radius 1 km menampilkan peringatan:
+              arah datang, jarak, dan "Menepi &amp; beri jalan".
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- AI -->
+      <section id="ai" class="section" aria-labelledby="ai-title">
+        <div class="wrap">
+          <p class="label">Teknologi AI · prediksi waktu tiba (ETA)</p>
+          <h2 id="ai-title">AI menentukan kapan lampu dibuka.</h2>
+          <div class="ai-grid">
+            <div class="ai-copy">
+              <h3>Apa modelnya</h3>
+              <p>
+                Regresi linear dengan regularisasi ridge, dibuat dan dilatih
+                sendiri, tanpa API AI pihak ketiga. Masukannya riwayat
+                kecepatan: jarak ÷ kecepatan sekarang, jarak ÷ rata-rata
+                kecepatan 10 detik terakhir, jarak, dan percepatan.
+              </p>
+              <h3>Kenapa tidak cukup radius tetap</h3>
+              <p>
+                Dengan radius 1 km saja, ambulans yang lambat atau terjebak
+                macet membuat jalur lain tertahan terlalu lama. Dengan prediksi
+                waktu tiba, hijau dibuka sekitar 40 detik sebelum kendaraan
+                sampai: yang melaju cepat dapat hijau lebih jauh dari simpang,
+                yang lambat lebih dekat.
+              </p>
+              <p class="ai-guard">
+                AI hanya menentukan <em>kapan</em>. Batas keselamatannya tetap
+                aturan pasti: radius maksimum, failsafe, dan pelepasan otomatis
+                setelah lewat.
+              </p>
+            </div>
+            <div class="ai-numbers card">
+              <h3>Hasil uji</h3>
+              <p>Diuji pada perjalanan yang tidak dipakai untuk melatih:</p>
+              <div class="table-wrap">
+                <table class="mae">
+                  <thead>
+                    <tr>
+                      <td></td>
+                      <th scope="col">Model SIREN</th>
+                      <th scope="col">Cara naif (jarak ÷ kecepatan)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">Rata-rata galat (MAE)</th>
+                      <td class="num num--win">17,7 detik</td>
+                      <td class="num">30,7 detik</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">60 detik terakhir sebelum simpang</th>
+                      <td class="num num--win">11,5 detik</td>
+                      <td class="num">13,4 detik</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="small">
+                Data: 400 perjalanan, 89.693 sampel latih, 22.562 sampel uji.
+              </p>
+              <div class="limit">
+                <p class="pill pill--wait">Catatan model</p>
+                <p>
+                  Model saat ini dilatih dengan data simulasi perjalanan di rute
+                  Jember (kecepatan acak, macet, berhenti, dan noise GPS). Model
+                  akan dilatih ulang dengan data perjalanan nyata pada uji
+                  lapangan.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Components -->
+      <section id="produk" class="section" aria-labelledby="produk-title">
+        <div class="wrap">
+          <p class="label">Produk</p>
+          <h2 id="produk-title">Empat bagian yang saling terhubung.</h2>
+          <div class="parts">
+            <article class="card part part--wide">
+              <div class="device-browser">
+                <div class="device-browser__bar" aria-hidden="true">
+                  <span class="device-browser__dots"
+                    ><span></span><span></span><span></span
+                  ></span>
+                  <span class="device-browser__url"
+                    >siren.polije.app/dashboard</span
+                  >
+                </div>
+                <img
+                  src="img/dashboard.webp"
+                  width="1440"
+                  height="900"
+                  loading="lazy"
+                  alt="Tangkapan layar Command Center: peta Jember dengan zona 1 km di sekitar simpang S1, kartu ambulans AMB-SIM1 dengan prediksi AI tiba 38 detik, status simpang S1 hijau untuk jalur utama, S2 dan S3 siklus normal."
+                />
+              </div>
+              <div class="part__body">
+                <p class="label">Untuk petugas Command Center</p>
+                <h3>Command Center (dashboard)</h3>
+                <p>
+                  Peta Jember, status simpang S1–S3, kartu tiap kendaraan dengan
+                  prediksi tiba, dan log kejadian. Semua berubah langsung.
+                </p>
+                <a class="btn btn--secondary" href="/dashboard/"
+                  >Buka Command Center</a
+                >
+              </div>
+            </article>
+
+            <article class="card part">
+              <div class="device-phone">
+                <img
+                  src="img/driver.webp"
+                  width="390"
+                  height="844"
+                  loading="lazy"
+                  alt="Tangkapan layar aplikasi petugas darurat: peta posisi ambulans, label Lampu hijau untuk Anda, dan tulisan Tiba di S1 dalam 36 detik, 393 meter lagi."
+                />
+              </div>
+              <p class="label">Untuk sopir ambulans dan pemadam</p>
+              <h3>Aplikasi Petugas Darurat</h3>
+              <p>
+                Wajib Kode Misi. Menampilkan simpang berikutnya, jaraknya, dan
+                status lampu. Posisi dari GPS asli atau simulasi rute.
+              </p>
+            </article>
+
+            <article class="card part">
+              <div class="device-phone">
+                <img
+                  src="img/citizen.webp"
+                  width="390"
+                  height="844"
+                  loading="lazy"
+                  alt="Tangkapan layar aplikasi warga: layar merah penuh bertuliskan Ambulans mendekat dari belakang, 447 meter, Menepi dan beri jalan."
+                />
+              </div>
+              <p class="label">Untuk warga dan pengendara</p>
+              <h3>Aplikasi Warga</h3>
+              <p>
+                Tanpa peta, satu layar: "Aman", atau peringatan merah-biru penuh
+                layar dengan arah datang dan jarak. HP bergetar tiap 3 detik
+                (Android, saat aplikasi terbuka).
+              </p>
+            </article>
+
+            <article class="card part">
+              <span class="icon-tile" aria-hidden="true">
+                <svg class="icon" viewBox="0 0 24 24">
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
+                  <rect x="9.5" y="9.5" width="5" height="5" rx="1" />
+                  <path
+                    d="M9 6V3M12 6V3M15 6V3M9 21v-3M12 21v-3M15 21v-3M6 9H3M6 12H3M6 15H3M21 9h-3M21 12h-3M21 15h-3"
+                  />
+                </svg>
+              </span>
+              <p class="label">Pengendali lampu</p>
+              <h3>Digital twin ESP32 (Wokwi)</h3>
+              <p>
+                Satu ESP32 virtual mengendalikan tiga simpang, 18 lampu. Ia
+                menerima perintah lewat MQTT, sama seperti pengendali lampu
+                sungguhan nantinya.
+              </p>
+              <dl class="spec">
+                <div>
+                  <dt>Simpang</dt>
+                  <dd>S1 · S2 · S3</dd>
+                </div>
+                <div>
+                  <dt>Lampu</dt>
+                  <dd>18 LED</dd>
+                </div>
+                <div>
+                  <dt>Perintah</dt>
+                  <dd>MQTT</dd>
+                </div>
+              </dl>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Safety -->
+      <section id="keamanan" class="section" aria-labelledby="keamanan-title">
+        <div class="wrap">
+          <p class="label">Keamanan dan keandalan</p>
+          <h2 id="keamanan-title">Aman saat dipakai, aman saat gagal.</h2>
+          <ul class="grid-2 safety">
+            <li class="card">
+              <span class="icon-tile" aria-hidden="true">
+                <svg class="icon" viewBox="0 0 24 24">
+                  <rect x="5" y="10.5" width="14" height="10" rx="2" />
+                  <path d="M8 10.5v-3a4 4 0 0 1 8 0v3M12 14.5v2" />
+                </svg>
+              </span>
+              <h3>Kode Misi melawan "ambulans kosong"</h3>
+              <p>
+                Tanpa kode yang valid, server menolak posisi kendaraan dan lampu
+                tidak berubah. Versi produksi akan memakai kode per perjalanan
+                dari Command Center 112.
+              </p>
+            </li>
+            <li class="card">
+              <span class="icon-tile" aria-hidden="true">
+                <svg class="icon" viewBox="0 0 24 24">
+                  <rect x="8" y="2" width="8" height="17" rx="2" />
+                  <circle cx="12" cy="6.5" r="1.5" />
+                  <circle cx="12" cy="10.5" r="1.5" />
+                  <circle cx="12" cy="14.5" r="1.5" />
+                  <path d="M12 19v3" />
+                </svg>
+              </span>
+              <h3>Failsafe di lampu</h3>
+              <p>
+                Perintah prioritas berlaku 15 detik dan diperbarui server tiap 5
+                detik. Jika koneksi putus, ESP32 kembali sendiri ke siklus
+                normal.
+              </p>
+            </li>
+            <li class="card">
+              <span class="icon-tile" aria-hidden="true">
+                <svg class="icon" viewBox="0 0 24 24">
+                  <rect x="6.5" y="2" width="11" height="20" rx="2.5" />
+                  <path
+                    d="M12 8a2.5 2.5 0 0 0-2.5 2.5c0 2 2.5 4.5 2.5 4.5s2.5-2.5 2.5-4.5A2.5 2.5 0 0 0 12 8zM10.5 19h3"
+                  />
+                </svg>
+              </span>
+              <h3>Lokasi warga tetap di HP</h3>
+              <p>
+                Arah peringatan dihitung di HP warga. Posisinya tidak pernah
+                dikirim ke server.
+              </p>
+            </li>
+            <li class="card">
+              <span class="icon-tile" aria-hidden="true">
+                <svg class="icon" viewBox="0 0 24 24">
+                  <path d="M12 3.5L21.5 20h-19z" />
+                  <path d="M12 10v4.5M12 17.5v.01" />
+                </svg>
+              </span>
+              <h3>Broker privat untuk produksi</h3>
+              <p>
+                Saat ini perintah dikirim lewat broker MQTT publik tanpa kontrol
+                akses. Penerapan produksi memakai broker privat dengan
+                autentikasi.
+              </p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Demo -->
+      <section id="demo" class="section demo-band" aria-labelledby="demo-title">
+        <div class="wrap">
+          <div class="demo glass">
+            <div class="demo__head">
+              <h2 id="demo-title">Lihat demo langsung</h2>
+              <p class="demo__sub">Tidak perlu akun.</p>
+            </div>
+            <div class="demo__grid">
+              <div class="demo__col">
+                <h3>Cara cepat (satu layar)</h3>
+                <ol>
+                  <li>
+                    Buka
+                    <a href="/dashboard/">Command Center</a>
+                    (<code>/dashboard/</code>).
+                  </li>
+                  <li>
+                    Tekan <strong>Mulai demo</strong> di panel kanan. Ambulans
+                    simulasi berangkat menuju simpang S1.
+                  </li>
+                  <li>
+                    Lihat kartu kendaraan menghitung mundur, dan simpang S1
+                    berubah hijau saat prediksi tiba ≤ 40 detik.
+                  </li>
+                </ol>
+              </div>
+              <div class="demo__col">
+                <h3>Pakai HP sebagai sopir</h3>
+                <ol>
+                  <li>
+                    Buka <a href="/mobile/"><code>/mobile/</code></a
+                    >, pilih <strong>Petugas Darurat</strong>.
+                  </li>
+                  <li>
+                    Isi Kode Misi. Kode akses demo:
+                    <strong class="code">DEMO-112</strong>.
+                  </li>
+                  <li>
+                    Klik <strong>Mulai Misi</strong>. Mode simulasi rute bisa
+                    dicoba dari luar Jember.
+                  </li>
+                </ol>
+              </div>
+              <div class="demo__col">
+                <h3>Pakai HP kedua sebagai warga</h3>
+                <ol>
+                  <li>
+                    Buka <a href="/mobile/"><code>/mobile/</code></a
+                    >, pilih <strong>Warga / Pengendara</strong>.
+                  </li>
+                  <li>Centang <strong>Posisi simulasi</strong>.</li>
+                  <li>Tunggu peringatan muncul saat kendaraan mendekat.</li>
+                </ol>
+              </div>
+            </div>
+            <div class="actions">
+              <a class="btn btn--primary" href="/dashboard/">Buka dashboard</a>
+              <a class="btn btn--secondary" href="/mobile/">Buka aplikasi HP</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <div class="site-footer__top">
+          <div class="site-footer__brand">
+            <p class="brand">
+              <span class="brand__mark" aria-hidden="true">
+                <svg viewBox="0 0 32 32">
+                  <rect
+                    class="brand__housing"
+                    x="11"
+                    y="5"
+                    width="10"
+                    height="22"
+                    rx="5"
+                  />
+                  <circle class="brand__lamp" cx="16" cy="10.5" r="2" />
+                  <circle class="brand__lamp" cx="16" cy="16" r="2" />
+                  <circle
+                    class="brand__lamp brand__lamp--go"
+                    cx="16"
+                    cy="21.5"
+                    r="2.2"
+                  />
+                </svg>
+              </span>
+              <span class="brand__name">SIREN</span>
+            </p>
+            <p>Prioritas sinyal lalu lintas untuk ambulans dan pemadam.</p>
+          </div>
+          <nav class="site-footer__nav" aria-label="Tautan footer">
+            <a href="/dashboard/">Command Center</a>
+            <a href="/mobile/">Aplikasi</a>
+            <a href="#cara-kerja">Cara kerja</a>
+          </nav>
+        </div>
+        <div class="site-footer__bottom">
+          <p>© 2026 SIREN</p>
+          <p>
+            Data peta ©
+            <a href="https://www.openstreetmap.org/copyright"
+              >OpenStreetMap contributors</a
+            >
+          </p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
