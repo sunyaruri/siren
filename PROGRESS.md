@@ -205,6 +205,14 @@ Plan: `docs/superpowers/plans/2026-09-18-siren-backend-dashboard.md`
   silang kuning 3 dtk. Form driver disederhanakan (field URL Backend dihapus; backend selalu origin halaman). Dicek di
   browser: hijau → kuning → merah (siklus) → membuka → hijau untuk Anda.
 
+- 2026-11-06 — (1) Lampu dilepas otomatis bila kendaraan pemegang prioritas berhenti (< 3 km/j) 180 dtk
+  (`STOP_RELEASE_S`), sesuai klaim paper Bab 2.2 no. 1b; sebelumnya ambulans yang parkir dengan app menyala menahan
+  hijau tanpa batas. (2) Demo bersama membersihkan diri: simulasi yang dijeda/selesai dihapus setelah 5 menit, pengaturan
+  Panel Demo kembali ke bawaan (DEMO-112, radius 1 km) 30 menit setelah aktivitas operator terakhir. Pemicunya: di
+  produksi kode misi tertinggal "AMB-01" dan radius 850 m sehingga DEMO-112 untuk juri ditolak. (3) Dialog konfirmasi
+  sebelum Selesai Misi; status HUD "Menunggu prioritas lampu" agar tidak bertentangan dengan lampu siklus yang hijau.
+  `npm test` 57/57; dicek di browser (dialog di tengah, Batal tetap aktif, Ya selesai mengakhiri misi).
+
 ## Next
 
 - Simpan `sketch.ino` + `diagram.json` terbaru ke proyek Wokwi online (link untuk demo/video).

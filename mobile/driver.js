@@ -1,6 +1,6 @@
-import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106k";
+import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106l";
 // Same traffic-light state machine the dashboard uses (a copy of the ESP32 firmware logic).
-import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority } from "/dashboard/signals.js?v=20261106k";
+import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority } from "/dashboard/signals.js?v=20261106l";
 
 const L = window.L;
 const DEFAULT_SIM_SPEED_KMH = 60;
@@ -28,6 +28,7 @@ const el = {
   gpsToggle: document.getElementById("gps-toggle"),
   btnStart: document.getElementById("btn-start"),
   btnStop: document.getElementById("btn-stop"),
+  confirmStop: document.getElementById("confirm-stop"),
   hud: document.getElementById("hud-card"),
   hudState: document.getElementById("hud-state"),
   hudEtaLabel: document.getElementById("hud-eta-label"),
@@ -325,7 +326,8 @@ export function initDriver({ getJson }) {
     const green = next.mode === "PRIORITY" && !opening;
     const hasEta = Number.isFinite(next.etaS);
     showHud(green ? "green" : "wait", {
-      status: green ? "Lampu hijau untuk Anda" : opening ? "Membuka lampu hijau…" : "Menunggu lampu hijau",
+      // "Waiting for priority", not "waiting for green": the lamp row may show a normal-cycle green at the same time.
+      status: green ? "Lampu hijau untuk Anda" : opening ? "Membuka lampu hijau…" : "Menunggu prioritas lampu",
       // Small label + big value: the value alone stays on one line even on a 320px phone.
       etaLabel: hasEta ? `Perkiraan AI · tiba di ${next.id} dalam` : "Simpang berikutnya",
       eta: hasEta ? formatEta(next.etaS) : next.id,
@@ -360,5 +362,13 @@ export function initDriver({ getJson }) {
     window.location.reload(); // second tap: back to the landing, same as the topbar back button
   }
 
-  el.btnStop.addEventListener("click", () => stop());
+  // Ending a mission releases the lights, so it asks first; once ended the same button just goes back to the menu.
+  el.btnStop.addEventListener("click", () => {
+    if (stopped || !el.confirmStop?.showModal) return stop();
+    el.confirmStop.returnValue = "";
+    el.confirmStop.showModal();
+  });
+  el.confirmStop?.addEventListener("close", () => {
+    if (el.confirmStop.returnValue === "confirm") stop();
+  });
 }

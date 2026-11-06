@@ -3,7 +3,7 @@ import path from 'node:path';
 import { connect } from 'mqtt';
 import { createApp, type PublicConfig } from './app.ts';
 import { config, intersections } from './config.ts';
-import { publishDemo, type DemoDeps } from './demo-api.ts';
+import { publishDemo, restoreDemoDefaults, type DemoDefaults, type DemoDeps } from './demo-api.ts';
 import { DemoRunner } from './demo.ts';
 import { PriorityEngine, type Command } from './priority.ts';
 import { ingestGps, publishCommands, removeVehicle, type Publish } from './publish.ts';
@@ -34,7 +34,12 @@ const demo: DemoDeps = {
   // 2350 m along the route = Jl. PB Sudirman between S1 and S2, the Citizen HUD's old fixed demo point.
   settings: { citizenAlongM: 2350, speedKmh: 60 },
   engineOpts: config,
+  lastAdminAt: 0,
 };
+// The shared demo cleans up after itself so every visitor (e.g. a judge) finds it as the server started.
+const demoDefaults: DemoDefaults = { codes: [...config.missionCodes], radiusM: config.radiusM, settings: { ...demo.settings } };
+const DEMO_IDLE_MS = 5 * 60_000; // paused/arrived demo vehicles are removed after this
+const DEMO_SETTINGS_RESET_MS = 30 * 60_000; // Panel Demo settings revert after this long without operator activity
 const publicConfig: PublicConfig = {
   topicPrefix: config.topicPrefix,
   mqttWsUrl: config.mqttWsUrl,
@@ -55,6 +60,11 @@ setInterval(() => {
   const { fixes, arrived } = demo.runner.tick(now);
   for (const gps of fixes) ingestGps(publish, engine, config.topicPrefix, gps, now);
   for (const id of arrived) removeVehicle(publish, engine, config.topicPrefix, id, now);
+  for (const id of demo.runner.pruneIdle(now, DEMO_IDLE_MS)) removeVehicle(publish, engine, config.topicPrefix, id, now);
+  if (demo.lastAdminAt && now - demo.lastAdminAt > DEMO_SETTINGS_RESET_MS) {
+    restoreDemoDefaults({ demo, publicConfig, missionCodes: config.missionCodes, publish }, demoDefaults, now);
+    demo.lastAdminAt = 0;
+  }
 }, 1000);
 
 const app = createApp({

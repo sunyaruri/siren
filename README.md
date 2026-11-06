@@ -120,6 +120,7 @@ sampai di simpang. Lampu hijau dibuka saat kendaraan di dalam radius, sedang men
 | `PASS_M` / `PASS_HYSTERESIS_M` | `50` / `20` | deteksi "sudah lewat simpang" |
 | `TTL_S` / `REFRESH_S` / `STALE_S` | `15` / `5` / `15` | failsafe ESP32, interval refresh, batas kendaraan hilang |
 | `ETA_LEAD_S` | `40` | lampu hijau saat prediksi ETA ≤ nilai ini (detik); `0` = pemicu radius saja |
+| `STOP_RELEASE_S` | `180` | lampu hijau dilepas bila kendaraan berhenti (< 3 km/j) selama ini (detik); `0` = mati |
 | `MISSION_CODES` | `DEMO-112` | kode misi awal, pisahkan dengan koma (bisa diubah dari Panel Demo) |
 | `DEMO_KEY` | kosong | kunci Panel Demo; kosong = panel mati |
 

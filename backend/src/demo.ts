@@ -75,6 +75,8 @@ interface Run {
   /** null = paused. */
   movingSince: number | null;
   arrived: boolean;
+  /** Since when it has been paused, rewound or arrived; null while driving. Idle runs are pruned (pruneIdle). */
+  idleSince: number | null;
 }
 
 /**
@@ -94,7 +96,7 @@ export class DemoRunner {
   start(type: VehicleType, startM: number, speedKmh: number, now: number): string {
     this.#count += 1;
     const vehicleId = `${type === 'ambulance' ? 'AMB' : 'DMK'}-SIM${this.#count}`;
-    this.#runs.set(vehicleId, { type, startM, speedKmh, alongM: startM, movingSince: now, arrived: false });
+    this.#runs.set(vehicleId, { type, startM, speedKmh, alongM: startM, movingSince: now, arrived: false, idleSince: null });
     return vehicleId;
   }
 
@@ -102,29 +104,49 @@ export class DemoRunner {
     for (const run of this.#runs.values()) {
       run.alongM = this.#alongM(run, now);
       run.movingSince = null;
+      run.idleSince ??= now;
     }
   }
 
   resumeAll(now: number): void {
-    for (const run of this.#runs.values()) if (!run.arrived) run.movingSince ??= now;
+    for (const run of this.#runs.values()) {
+      if (run.arrived) continue;
+      run.movingSince ??= now;
+      run.idleSince = null;
+    }
   }
 
   /** Puts every vehicle back at its start point, paused. Returns their ids (their trip has to be forgotten). */
-  rewindAll(): string[] {
+  rewindAll(now: number): string[] {
     for (const run of this.#runs.values()) {
       run.alongM = run.startM;
       run.movingSince = null;
       run.arrived = false;
+      run.idleSince = now;
     }
     return [...this.#runs.keys()];
   }
 
-  /** Removes every vehicle and returns the ids that were running. */
   /** Forgets runs that reached the end (already off the map), so public quick runs cannot pile up. */
   dropArrived(): void {
     for (const [id, run] of this.#runs) if (run.arrived) this.#runs.delete(id);
   }
 
+  /**
+   * Removes runs that have been paused, rewound or arrived for at least `idleMs`, so a forgotten demo does not greet the
+   * next visitor. Returns their ids (the caller ends their trips).
+   */
+  pruneIdle(now: number, idleMs: number): string[] {
+    const ids: string[] = [];
+    for (const [id, run] of this.#runs) {
+      if (run.idleSince === null || now - run.idleSince < idleMs) continue;
+      this.#runs.delete(id);
+      ids.push(id);
+    }
+    return ids;
+  }
+
+  /** Removes every vehicle and returns the ids that were running. */
   removeAll(): string[] {
     const ids = [...this.#runs.keys()];
     this.#runs.clear();
@@ -148,6 +170,7 @@ export class DemoRunner {
         run.arrived = true;
         run.alongM = this.#route.totalM;
         run.movingSince = null;
+        run.idleSince = now;
         arrived.push(vehicleId);
       }
     }

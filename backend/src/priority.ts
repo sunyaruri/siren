@@ -14,7 +14,15 @@ export interface EngineOptions {
    * seconds. 0 or unset = radius only.
    */
   etaLeadS?: number;
+  /**
+   * A held green is released once its vehicle has been slower than STOP_SPEED_MS for this many seconds (e.g. parked at
+   * the scene with the app still running), so the cross street is not held red indefinitely. 0 or unset = off.
+   */
+  stopReleaseS?: number;
 }
+
+/** 3 km/h: below this a vehicle counts as stopped (GPS jitter on a parked phone stays under it). */
+const STOP_SPEED_MS = 3 / 3.6;
 
 export interface Command {
   intersectionId: string;
@@ -45,6 +53,8 @@ interface VehicleMemory {
   /** Speed history (m/s) over the last ETA_WINDOW_MS, the ETA model's input. */
   speeds: SpeedSample[];
   last?: { t: number; pos: LatLng };
+  /** When the vehicle last dropped below STOP_SPEED_MS; null while it is moving. */
+  stoppedSince: number | null;
 }
 
 /** Phase A when the vehicle comes along the main road (within 45° of axisA, either direction), else B. */
@@ -72,14 +82,16 @@ export class PriorityEngine {
   }
 
   update(gps: GpsInput, now: number): { commands: Command[]; next: NextIntersection | null } {
-    const { radiusM, passM, passHysteresisM, etaLeadS } = this.#opts;
+    const { radiusM, passM, passHysteresisM, etaLeadS, stopReleaseS } = this.#opts;
     let vehicle = this.#vehicles.get(gps.vehicleId);
     if (!vehicle) {
-      vehicle = { lastSeen: now, distances: new Map(), visited: new Set(), speeds: [] };
+      vehicle = { lastSeen: now, distances: new Map(), visited: new Set(), speeds: [], stoppedSince: null };
       this.#vehicles.set(gps.vehicleId, vehicle);
     }
     vehicle.lastSeen = now;
     this.#recordSpeed(vehicle, gps, now);
+    const stoppedTooLong =
+      !!stopReleaseS && vehicle.stoppedSince !== null && now - vehicle.stoppedSince >= stopReleaseS * 1000;
 
     const commands: Command[] = [];
     let next: NextIntersection | null = null;
@@ -104,7 +116,7 @@ export class PriorityEngine {
         state.minDistanceM = Math.min(state.minDistanceM, d);
         const passedNow = state.minDistanceM <= passM && d > state.minDistanceM + passHysteresisM;
         if (passedNow) vehicle.visited.add(it.id);
-        if (passedNow || d > radiusM) commands.push(this.#set(it.id, { mode: 'NORMAL' }, now));
+        if (passedNow || d > radiusM || stoppedTooLong) commands.push(this.#set(it.id, { mode: 'NORMAL' }, now));
       }
 
       const after = this.#state(it.id); // state after this fix was applied
@@ -156,6 +168,7 @@ export class PriorityEngine {
     const dtS = last ? (now - last.t) / 1000 : 0;
     const v = gps.speed !== undefined ? gps.speed / 3.6 : last && dtS > 0 ? haversineM(last.pos, gps) / dtS : 0;
     vehicle.speeds.push({ t: now, v });
+    vehicle.stoppedSince = v < STOP_SPEED_MS ? (vehicle.stoppedSince ?? now) : null;
     vehicle.speeds = vehicle.speeds.filter((s) => now - s.t <= ETA_WINDOW_MS);
     vehicle.last = { t: now, pos: { lat: gps.lat, lng: gps.lng } };
   }

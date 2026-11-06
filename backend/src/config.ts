@@ -24,6 +24,8 @@ export const config = {
   staleS: numberEnv('STALE_S', 15),
   // Predictive trigger (ETA model): green once the predicted arrival is this close. 0 = radius-only trigger.
   etaLeadS: numberEnv('ETA_LEAD_S', 40, true),
+  // Release a held green when its vehicle has been stopped (< 3 km/h) this long. 0 = never.
+  stopReleaseS: numberEnv('STOP_RELEASE_S', 180, true),
   // ponytail: static list of mission codes. Production: per-trip tokens issued by Command Center 112 / the referring
   // hospital, bound to one vehicleId and expiring when the trip ends.
   // Stored uppercase: the driver app uppercases what is typed.

@@ -64,7 +64,7 @@ test('DemoRunner pause freezes the vehicle in place, resume continues, rewind pa
   runner.resumeAll(60_000);
   assert.equal(runner.list(70_000)[0].alongM, 300);
 
-  assert.deepEqual(runner.rewindAll(), ['AMB-SIM1']);
+  assert.deepEqual(runner.rewindAll(60_000), ['AMB-SIM1']);
   assert.deepEqual(runner.list(99_000)[0], {
     vehicleId: 'AMB-SIM1',
     type: 'ambulance',
@@ -88,8 +88,22 @@ test('DemoRunner: arriving ends the trip once, keeps the run parked, and Reset c
   runner.resumeAll(32_000);
   assert.deepEqual(runner.tick(33_000).fixes, [], 'resume does not wake an arrived vehicle');
 
-  runner.rewindAll();
+  runner.rewindAll(39_000);
   runner.resumeAll(40_000);
   assert.equal(runner.tick(40_000).fixes.length, 1, 'after Reset it drives again from its start');
   assert.equal(runner.list(40_000)[0].alongM, 2000);
+});
+
+test('DemoRunner.pruneIdle removes runs paused for longer than idleMs, never moving ones', () => {
+  const route = createRoute([
+    { lat: 0, lng: 0 },
+    { lat: 0, lng: 0.05 },
+  ]);
+  const runner = new DemoRunner(route);
+  runner.start('ambulance', 0, 60, 0);
+  assert.deepEqual(runner.pruneIdle(600_000, 300_000), [], 'driving: kept');
+  runner.pauseAll(10_000);
+  assert.deepEqual(runner.pruneIdle(309_999, 300_000), [], 'paused 299.999 s: kept');
+  assert.deepEqual(runner.pruneIdle(310_000, 300_000), ['AMB-SIM1'], 'paused 5 min: removed');
+  assert.deepEqual(runner.list(310_000), []);
 });

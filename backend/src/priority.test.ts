@@ -129,6 +129,20 @@ test('an intersection passed on this trip does not re-trigger when the route ben
   assert.deepEqual(out.slice(5).flat(), []);
 });
 
+test('stopReleaseS: a vehicle stopped for 3 minutes releases its green; moving again resets the clock', () => {
+  const engine = new PriorityEngine([X], { ...OPTS, stopReleaseS: 180 });
+  const moving = (northM: number) => ({ ...fix(at(northM)), speed: 36 });
+  const parked = { ...fix(at(-500)), speed: 0 };
+  engine.update(moving(-1100), 0);
+  assert.deepEqual(engine.update(moving(-990), 1000).commands, priority(1000));
+  engine.update(moving(-500), 2000);
+  for (let t = 3000; t < 3000 + 100_000; t += 5000) assert.deepEqual(engine.update(parked, t).commands, []);
+  engine.update(moving(-490), 103_000); // drives a few meters: the stop clock restarts
+  for (let t = 104_000; t < 104_000 + 180_000; t += 5000) assert.deepEqual(engine.update(parked, t).commands, []);
+  assert.deepEqual(engine.update(parked, 284_000).commands, normal(284_000), '180 s stopped: released');
+  assert.deepEqual(engine.update(parked, 289_000).commands, [], 'still parked: no re-trigger');
+});
+
 test('etaLeadS: inside the radius, green waits until the predicted ETA is short enough', () => {
   const engine = new PriorityEngine([X], { ...OPTS, etaLeadS: 20 }, ETA_IS_D_OVER_V);
   const at10ms = (northM: number) => ({ ...fix(at(northM)), speed: 36 });

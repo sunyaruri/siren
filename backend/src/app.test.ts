@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createApp } from './app.ts';
-import { MAX_PUBLIC_RUNS } from './demo-api.ts';
+import { MAX_PUBLIC_RUNS, restoreDemoDefaults } from './demo-api.ts';
 import { DemoRunner } from './demo.ts';
 import type { Publish } from './publish.ts';
 import { createRoute } from './route.ts';
@@ -32,6 +32,7 @@ const app = createApp({
     route,
     settings: { citizenAlongM: 0, speedKmh: 60 },
     engineOpts,
+    lastAdminAt: 0,
   },
   dashboardDir: import.meta.dirname,
 });
@@ -247,4 +248,26 @@ test('POST /api/demo/quick-run needs no key, is capped, and the rest of the pane
   await demoApi('POST', '/clear');
   assert.equal((await quick()).status, 201, 'room again after clearing');
   await demoApi('POST', '/clear');
+});
+
+test('restoreDemoDefaults puts codes, radius, speed and the citizen point back, then republishes', () => {
+  const codes = new Set(['AMB-01']);
+  const pub = { topicPrefix: 't', mqttWsUrl: '', radiusM: 850, staleS: 15, simSpeedKmh: 120, etaLeadS: 40 };
+  const demo = {
+    key: 'k',
+    runner: new DemoRunner(route),
+    route,
+    settings: { citizenAlongM: 10, speedKmh: 120 },
+    engineOpts: { radiusM: 850 },
+    lastAdminAt: 1,
+  };
+  const topics: string[] = [];
+  const defaults = { codes: ['DEMO-112'], radiusM: 1000, settings: { citizenAlongM: 2350, speedKmh: 60 } };
+  restoreDemoDefaults({ demo, publicConfig: pub, missionCodes: codes, publish: (topic) => topics.push(topic) }, defaults, 0);
+  assert.deepEqual([...codes], ['DEMO-112']);
+  assert.equal(demo.engineOpts.radiusM, 1000);
+  assert.equal(pub.radiusM, 1000);
+  assert.equal(pub.simSpeedKmh, 60);
+  assert.equal(demo.settings.citizenAlongM, 2350);
+  assert.deepEqual(topics, ['t/demo']);
 });

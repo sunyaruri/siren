@@ -15,6 +15,29 @@ export interface DemoDeps {
   settings: DemoSettings;
   /** Shared with the PriorityEngine, so a radius change applies from the next GPS fix. */
   engineOpts: { radiusM: number };
+  /** Last keyed Panel Demo request (ms); 0 = none since the last restore. Drives restoreDemoDefaults in server.ts. */
+  lastAdminAt: number;
+}
+
+/** The server's start values for everything the Panel Demo can change. */
+export interface DemoDefaults {
+  codes: string[];
+  radiusM: number;
+  settings: DemoSettings;
+}
+
+/** Puts mission codes, radius, simulator speed and the citizen point back to their start values, then republishes. */
+export function restoreDemoDefaults(
+  { demo, publicConfig, missionCodes, publish }: Pick<RouterDeps, 'demo' | 'publicConfig' | 'missionCodes' | 'publish'>,
+  defaults: DemoDefaults,
+  now: number,
+): void {
+  missionCodes.clear();
+  for (const code of defaults.codes) missionCodes.add(code);
+  demo.engineOpts.radiusM = publicConfig.radiusM = defaults.radiusM;
+  demo.settings.citizenAlongM = defaults.settings.citizenAlongM;
+  demo.settings.speedKmh = publicConfig.simSpeedKmh = defaults.settings.speedKmh;
+  publishDemo(publish, publicConfig, demo, now);
 }
 
 interface RouterDeps {
@@ -56,6 +79,7 @@ export function demoRouter({ demo, engine, publish, publicConfig, intersections,
       res.status(401).json({ error: 'invalid demo key' });
       return;
     }
+    demo.lastAdminAt = Date.now();
     next();
   };
   // Keyless on purpose: a visitor (e.g. a judge) can start one ambulance just outside S1's radius without the panel
@@ -148,7 +172,7 @@ export function demoRouter({ demo, engine, publish, publicConfig, intersections,
   router.post('/reset', (_req, res) => {
     const now = Date.now();
     // `gone` first so the dashboard drops the old trail instead of drawing a line back to the start.
-    for (const id of demo.runner.rewindAll()) removeVehicle(publish, engine, publicConfig.topicPrefix, id, now);
+    for (const id of demo.runner.rewindAll(now)) removeVehicle(publish, engine, publicConfig.topicPrefix, id, now);
     publishCommands(publish, publicConfig.topicPrefix, engine.reset(now));
     publishDemo(publish, publicConfig, demo, now);
     res.json(state(now));
