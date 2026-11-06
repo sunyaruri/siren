@@ -195,6 +195,16 @@ Plan: `docs/superpowers/plans/2026-09-18-siren-backend-dashboard.md`
   menutupi rute. Demo tanpa kunci: `POST /api/demo/quick-run` (tombol *Mulai demo*), maks. 3 kendaraan simulasi,
   pengaturan lanjutan tetap berkunci. `npm test` 50/50; dicek di browser (1440, 1280, 390).
 
+- 2026-11-06 — Status lampu merah/kuning/hijau di dashboard: tiap simpang di peta punya ikon dua lampu (kiri jalur
+  utama, kanan jalur silang) dan kartu simpang menulis warnanya. `dashboard/signals.js` meniru state machine ESP32
+  (siklus 10/3/10/3 dtk, stagger S1/S2/S3, jeda kuning 3 dtk saat prioritas, lanjut dari kuning setelah lewat); ESP32
+  belum melaporkan warnanya, jadi siklus normal bisa beda beberapa detik dari LED Wokwi. 4 tes baru, `npm test` 54/54.
+
+- 2026-11-06 — HUD driver juga menampilkan warna lampu jalurnya sendiri di simpang berikutnya ("Lampu jalur Anda di
+  S1: merah"), dari perintah MQTT + state machine yang sama dengan dashboard; status "Membuka lampu hijau…" selama jalur
+  silang kuning 3 dtk. Form driver disederhanakan (field URL Backend dihapus; backend selalu origin halaman). Dicek di
+  browser: hijau → kuning → merah (siklus) → membuka → hijau untuk Anda.
+
 ## Next
 
 - Simpan `sketch.ino` + `diagram.json` terbaru ke proyek Wokwi online (link untuk demo/video).

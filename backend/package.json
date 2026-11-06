@@ -10,7 +10,7 @@
     "dev": "node --env-file-if-exists=.env --watch src/server.ts",
     "sim": "node scripts/sim.ts",
     "train:eta": "node scripts/train-eta.ts",
-    "test": "node --test \"src/**/*.test.ts\"",
+    "test": "node --test \"src/**/*.test.ts\" ../dashboard/signals.test.js",
     "typecheck": "tsc"
   },
   "dependencies": {

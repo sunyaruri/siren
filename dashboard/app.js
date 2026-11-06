@@ -1,5 +1,6 @@
 import mqtt from "https://cdn.jsdelivr.net/npm/mqtt@5.16.0/dist/mqtt.esm.js";
-import { initDemoPanel } from "./demo-panel.js?v=20261106h";
+import { initDemoPanel } from "./demo-panel.js?v=20261106j";
+import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority } from "./signals.js?v=20261106j";
 
 const L = window.L;
 const LABEL = { ambulance: "Ambulans", firetruck: "Pemadam" };
@@ -54,11 +55,13 @@ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "&copy; OpenStreetMap contributors",
 }).addTo(map);
 
-const dotIcon = (mode) =>
+const COLOR_WORD = { red: "merah", yellow: "kuning", green: "hijau" };
+// Two lamps per junction: left = main road (A), right = cross street (B). Colours come from signals.js only.
+const signalIcon = ({ A, B }) =>
   L.divIcon({
     className: "",
-    html: `<span class="signal-dot${mode === "PRIORITY" ? " signal-dot--priority" : ""}"></span>`,
-    iconSize: [14, 14],
+    html: `<span class="sig" title="Jalur utama ${COLOR_WORD[A]} · jalur silang ${COLOR_WORD[B]}"><i class="lamp lamp--${A}"></i><i class="lamp lamp--${B}"></i></span>`,
+    iconSize: [34, 18],
   });
 
 // `type` is whitelisted in onVehicle before it reaches this HTML string.
@@ -94,12 +97,14 @@ for (const info of intersections) {
     className: "zone",
     ...ZONE_STYLE.NORMAL,
   }).addTo(map);
-  const dot = L.marker([info.lat, info.lng], { icon: dotIcon("NORMAL") })
+  const signal = createSignal(FIRST_STEP[info.id] ?? 0, Date.now());
+  const colors = advance(signal, Date.now());
+  const dot = L.marker([info.lat, info.lng], { icon: signalIcon(colors) })
     .addTo(map)
     .bindTooltip(info.id, {
       permanent: true,
       direction: "top",
-      offset: [0, -8],
+      offset: [0, -10],
       className: "junction-label",
     });
   junctions.set(info.id, {
@@ -108,6 +113,8 @@ for (const info of intersections) {
     dot,
     cmd: { mode: "NORMAL" },
     expiresAt: 0,
+    signal,
+    colors,
   });
 }
 // Bounds from coordinates, not circle.getBounds(): layers are not projected until the map has a view.
@@ -136,8 +143,8 @@ legend.onAdd = () => {
   div.innerHTML = `
     <strong>Keterangan peta</strong>
     <span><i class="legend__zone"></i><span id="legend-zone"></span></span>
-    <span><i class="legend__dot legend__dot--green"></i>Simpang hijau untuk kendaraan darurat</span>
-    <span><i class="legend__dot"></i>Simpang siklus normal</span>
+    <span><i class="legend__sig"><b class="lamp lamp--red"></b><b class="lamp lamp--green"></b></i>Lampu simpang: kiri jalur utama, kanan jalur silang</span>
+    <span><i class="legend__zone legend__zone--green"></i>Zona hijau: lampu ditahan untuk kendaraan darurat</span>
     <span><i class="legend__vehicle"></i>Ambulans (biru) / pemadam (merah)</span>
     <span><i class="legend__route"></i>Rute demo</span>
     <span><i class="legend__citizen"></i>Warga (posisi simulasi)</span>`;
@@ -168,6 +175,20 @@ const citizenMarker = L.circleMarker([0, 0], {
 }).bindTooltip("Warga (posisi simulasi)");
 
 // --- panel -----------------------------------------------------------------
+/** "Jalur utama ● hijau · Jalur silang ● merah": the colour in words too, never colour alone. */
+function lampsRow({ A, B }) {
+  const row = document.createElement("span");
+  row.className = "card__lamps";
+  for (const [label, color] of [["Jalur utama", A], ["Jalur silang", B]]) {
+    const item = document.createElement("span");
+    const lamp = document.createElement("i");
+    lamp.className = `lamp lamp--${color}`;
+    item.append(lamp, `${label} ${COLOR_WORD[color]}`);
+    row.append(item);
+  }
+  return row;
+}
+
 function card(title, pillText, pillClass, sub) {
   const li = document.createElement("li");
   li.className = "card";
@@ -193,16 +214,18 @@ function empty(text) {
 
 function renderJunctions() {
   el.intersections.replaceChildren(
-    ...[...junctions.values()].map(({ info, cmd }) =>
-      cmd.mode === "PRIORITY"
+    ...[...junctions.values()].map(({ info, cmd, colors }) => {
+      const li = cmd.mode === "PRIORITY"
         ? card(
             info.id,
             `Hijau · ${PHASE[cmd.phase]}`,
             "pill--priority",
             `${info.name} · untuk ${LABEL[cmd.vehicleType]} ${cmd.vehicleId}`,
           )
-        : card(info.id, "Siklus normal", "", info.name),
-    ),
+        : card(info.id, "Siklus normal", "", info.name);
+      li.append(lampsRow(colors));
+      return li;
+    }),
   );
 }
 
@@ -348,7 +371,13 @@ function applyJunction(j) {
   const mode = j.cmd.mode;
   j.zone.setStyle(ZONE_STYLE[mode]);
   j.zone.getElement()?.classList.toggle("zone--priority", mode === "PRIORITY");
-  j.dot.setIcon(dotIcon(mode));
+  // Mirror the ESP32: start or re-target the hold, or go back to the cycle at the held lane's yellow.
+  const now = Date.now();
+  if (mode === "PRIORITY" && (j.signal.mode !== "PRIORITY" || j.signal.phase !== j.cmd.phase))
+    enterPriority(j.signal, j.cmd.phase, now);
+  else if (mode === "NORMAL" && j.signal.mode === "PRIORITY") enterNormal(j.signal, now);
+  j.colors = advance(j.signal, now);
+  j.dot.setIcon(signalIcon(j.colors));
   renderJunctions();
   renderVehicles();
 }
@@ -447,6 +476,20 @@ function onDemo(msg) {
     log(`Radius prioritas diubah ke ${msg.radiusM} m`);
   }
 }
+
+// Lamp colours change on their own (cycle steps, the 3 s yield): repaint only when one actually changed.
+setInterval(() => {
+  const now = Date.now();
+  let changed = false;
+  for (const j of junctions.values()) {
+    const next = advance(j.signal, now);
+    if (next.A === j.colors.A && next.B === j.colors.B) continue;
+    j.colors = next;
+    j.dot.setIcon(signalIcon(next));
+    changed = true;
+  }
+  if (changed) renderJunctions();
+}, 250);
 
 // Display failsafe mirrors the ESP32: PRIORITY without refresh expires; silent vehicles disappear.
 setInterval(() => {

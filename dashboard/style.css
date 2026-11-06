@@ -381,6 +381,68 @@ h2 {
   color: var(--priority);
   font-weight: 600;
 }
+/* --- traffic-light lamps (map marker, junction cards, legend) --- */
+:root {
+  --lamp-red: #e0242b;
+  --lamp-yellow: #ffb000;
+  --lamp-green: #1fa64a;
+}
+.lamp {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+}
+.lamp--red {
+  background: var(--lamp-red);
+}
+.lamp--yellow {
+  background: var(--lamp-yellow);
+}
+.lamp--green {
+  background: var(--lamp-green);
+}
+.sig {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px 5px;
+  border-radius: 999px;
+  background: #1d1d1f;
+  box-shadow: 0 0 0 2px #fff, 0 2px 6px rgb(0 0 0 / 0.3);
+  transform: translate(-1px, -1px);
+}
+.card__lamps {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text);
+}
+.card__lamps > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend__sig {
+  display: inline-flex !important;
+  gap: 2px;
+  width: auto !important;
+  padding: 2px 3px;
+  border-radius: 999px;
+  background: #1d1d1f;
+}
+.legend__sig .lamp {
+  width: 7px;
+  height: 7px;
+}
+.legend__zone--green {
+  border-color: var(--priority) !important;
+  background: rgb(36 138 61 / 0.15) !important;
+}
 .empty-state__note {
   font-size: 13px;
   color: var(--muted);

@@ -1,4 +1,6 @@
-import { formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106i";
+import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106k";
+// Same traffic-light state machine the dashboard uses (a copy of the ESP32 firmware logic).
+import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority } from "/dashboard/signals.js?v=20261106k";
 
 const L = window.L;
 const DEFAULT_SIM_SPEED_KMH = 60;
@@ -6,6 +8,13 @@ const DEFAULT_SIM_SPEED_KMH = 60;
 let etaLeadS = 40;
 const VEHICLE_ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+const COLOR_WORD = { red: "merah", yellow: "kuning", green: "hijau" };
+
+/** Phase A when coming along the main road (within 45° of axisA, either direction), else B. Mirrors priority.ts. */
+function phaseFor(axisA, bearingFromIntersection) {
+  const diff = Math.abs(bearingFromIntersection - axisA) % 180;
+  return Math.min(diff, 180 - diff) < 45 ? "A" : "B";
+}
 
 const el = {
   status: document.getElementById("driver-status"),
@@ -26,6 +35,9 @@ const el = {
   hudName: document.getElementById("hud-name"),
   hudDistance: document.getElementById("hud-distance"),
   hudHint: document.getElementById("hud-hint"),
+  hudLamp: document.getElementById("hud-lamp"),
+  hudLampDot: document.getElementById("hud-lamp-dot"),
+  hudLampText: document.getElementById("hud-lamp-text"),
 };
 
 /** Shows `message` under `input` (or clears it) and marks the field invalid for screen readers. */
@@ -165,6 +177,7 @@ export function initDriver({ getJson }) {
     if (Number.isFinite(config.etaLeadS)) etaLeadS = config.etaLeadS;
     const source = useRealGps ? makeGpsSource() : makeRouteSimulator(route, simSpeedKmh);
     if (useRealGps) gpsSource = source;
+    startSignals(config, await getJson(`${backendUrl}/api/intersections`).catch(() => []));
 
     const mapEl = document.getElementById("driver-map");
     if (mapEl._leaflet_id) mapEl._leaflet_id = null; // defensive: survives initDriver() being invoked twice (e.g. bfcache restore)
@@ -223,7 +236,7 @@ export function initDriver({ getJson }) {
         });
         if (res.ok) {
           const body = await res.json();
-          applyHud(body.nextIntersection);
+          applyHud(body.nextIntersection, myLamp(body.nextIntersection, lat, lng));
         } else if (res.status === 401) {
           stop("Kode ditolak", "Kode misi ditolak"); // code revoked mid-mission: stop sending, lights fall back via ttl
         }
@@ -245,9 +258,61 @@ export function initDriver({ getJson }) {
     el.hudHint.textContent = hint;
   }
 
+  /** id -> { info, signal, expiresAt }: lamp colours mirrored from the intersection commands on MQTT. */
+  const junctions = new Map();
+  let mqttClient = null;
+
+  function startSignals(config, intersections) {
+    if (!config.mqttWsUrl || !config.topicPrefix || !Array.isArray(intersections)) return;
+    const now = Date.now();
+    for (const info of intersections) {
+      if (typeof info?.id !== "string" || !Number.isFinite(info.axisA)) continue;
+      junctions.set(info.id, { info, signal: createSignal(FIRST_STEP[info.id] ?? 0, now), expiresAt: 0 });
+    }
+    // Public broker: every message is shape-checked before it touches the state machine.
+    mqttClient = connectMqtt(config.mqttWsUrl, `${config.topicPrefix}/intersection/+/cmd`, {
+      onStatus: () => {},
+      onMessage: (topic, cmd) => {
+        const j = junctions.get(topic.split("/").at(-2));
+        if (!j) return;
+        const t = Date.now();
+        const priority =
+          cmd?.mode === "PRIORITY" &&
+          (cmd.phase === "A" || cmd.phase === "B") &&
+          Number.isFinite(cmd.ttl) &&
+          Number.isFinite(cmd.ts) &&
+          t - cmd.ts <= cmd.ttl * 1000; // a stale retained PRIORITY counts as NORMAL
+        if (priority) {
+          j.expiresAt = t + cmd.ttl * 1000;
+          if (j.signal.mode !== "PRIORITY" || j.signal.phase !== cmd.phase) enterPriority(j.signal, cmd.phase, t);
+        } else if (j.signal.mode === "PRIORITY") {
+          enterNormal(j.signal, t);
+        }
+      },
+    });
+  }
+
+  /** The colour of this vehicle's own lane at the next intersection, or null when unknown. */
+  function myLamp(next, lat, lng) {
+    const j = next && junctions.get(next.id);
+    if (!j || !mqttClient?.connected) return null;
+    const now = Date.now();
+    if (j.signal.mode === "PRIORITY" && now > j.expiresAt) enterNormal(j.signal, now); // ttl failsafe, like the ESP32
+    const lane = phaseFor(j.info.axisA, bearingDeg(j.info.lat, j.info.lng, lat, lng));
+    return advance(j.signal, now)[lane];
+  }
+
+  function showLamp(id, color) {
+    el.hudLamp.hidden = !color;
+    if (!color) return;
+    el.hudLampDot.className = `lamp lamp--${color}`;
+    el.hudLampText.textContent = `Lampu jalur Anda di ${id}: ${COLOR_WORD[color]}`;
+  }
+
   // Plain-language HUD: the engine's NORMAL/PRIORITY becomes "waiting" vs "green for you".
-  function applyHud(next) {
+  function applyHud(next, lamp = null) {
     if (stopped) return; // a request still in flight when the mission ended
+    showLamp(next?.id, next ? lamp : null);
     if (!next) {
       showHud("idle", {
         status: "Tidak ada simpang di depan",
@@ -255,10 +320,12 @@ export function initDriver({ getJson }) {
       });
       return;
     }
-    const green = next.mode === "PRIORITY";
+    // Held for this vehicle but the cross street is still on its 3 s yellow: not green yet.
+    const opening = next.mode === "PRIORITY" && lamp !== null && lamp !== "green";
+    const green = next.mode === "PRIORITY" && !opening;
     const hasEta = Number.isFinite(next.etaS);
     showHud(green ? "green" : "wait", {
-      status: green ? "Lampu hijau untuk Anda" : "Menunggu lampu hijau",
+      status: green ? "Lampu hijau untuk Anda" : opening ? "Membuka lampu hijau…" : "Menunggu lampu hijau",
       // Small label + big value: the value alone stays on one line even on a 320px phone.
       etaLabel: hasEta ? `Perkiraan AI · tiba di ${next.id} dalam` : "Simpang berikutnya",
       eta: hasEta ? formatEta(next.etaS) : next.id,
@@ -266,6 +333,8 @@ export function initDriver({ getJson }) {
       distance: `${Math.round(next.distanceM)} m lagi`,
       hint: green
         ? `${next.id} tetap hijau sampai Anda melewatinya.`
+        : opening
+          ? "Jalur silang kuning 3 detik, lalu jalur Anda hijau."
         : etaLeadS > 0
           ? `Dibuka otomatis saat perkiraan tiba ≤ ${etaLeadS} dtk.`
           : "Dibuka otomatis saat Anda masuk radius simpang.",
@@ -276,6 +345,8 @@ export function initDriver({ getJson }) {
     if (!stopped) {
       clearInterval(tickHandle);
       gpsSource?.stop();
+      mqttClient?.end();
+      showLamp(null, null);
       endMission?.();
       endMission = null;
       stopped = true;

@@ -1,4 +1,4 @@
-const CACHE = "siren-mobile-v14";
+const CACHE = "siren-mobile-v15";
 const SHELL = [
   "./",
   "index.html",

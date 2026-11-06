@@ -424,6 +424,37 @@ body {
   font: 600 14px var(--font-mono);
   color: var(--text);
 }
+/* Lamp colour of the driver's own lane at the next intersection (same colours as the dashboard). */
+.hud__lamp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.hud__lamp[hidden] {
+  display: none;
+}
+.lamp {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #8e8e93;
+  box-shadow: 0 0 0 3px #1d1d1f;
+}
+.lamp--red {
+  background: #e0242b;
+}
+.lamp--yellow {
+  background: #ffb000;
+}
+.lamp--green {
+  background: #1fa64a;
+}
 .toggle small {
   display: block;
   margin-top: 2px;
