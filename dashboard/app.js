@@ -1,6 +1,6 @@
 import mqtt from "https://cdn.jsdelivr.net/npm/mqtt@5.16.0/dist/mqtt.esm.js";
-import { initDemoPanel } from "./demo-panel.js?v=20261106j";
-import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority } from "./signals.js?v=20261106j";
+import { initDemoPanel } from "./demo-panel.js?v=20261106m";
+import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority, laneAt } from "./signals.js?v=20261106m";
 
 const L = window.L;
 const LABEL = { ambulance: "Ambulans", firetruck: "Pemadam" };
@@ -280,13 +280,16 @@ function span(className, text) {
   return node;
 }
 
+const STOP_KMH = 3; // same "stopped" threshold as the engine's stop release (priority.ts)
+const duration = (s) => (s % 60 === 0 ? `${s / 60} menit` : `${s} dtk`);
+
 /** One vehicle with the ETA model's prediction for its next intersection. */
 function vehicleCard(id, v) {
   const { data } = v;
   const li = document.createElement("li");
   li.className = "vcard";
-  const speed =
-    data.speed === 0 ? "berhenti" : `${Math.round(data.speed ?? 0)} km/j`;
+  const stopped = Number.isFinite(data.speed) && data.speed < STOP_KMH;
+  const speed = `${Math.round(data.speed ?? 0)} km/j`;
   const head = document.createElement("div");
   head.className = "vcard__head";
   head.append(
@@ -306,32 +309,57 @@ function vehicleCard(id, v) {
   }
 
   const lead = config.etaLeadS;
-  const green = target.cmd.mode === "PRIORITY" && target.cmd.vehicleId === id;
+  const where = target.info.id;
+  const holder = target.cmd.mode === "PRIORITY" ? target.cmd.vehicleId : null;
+  // Behind the vehicle that holds the light, in the same lane: the green it opened serves this one too.
+  const sameLane =
+    holder !== null &&
+    holder !== id &&
+    Number.isFinite(data.lat) &&
+    Number.isFinite(data.lng) &&
+    target.cmd.phase === laneAt(target.info, data.lat, data.lng);
+  const green = holder === id || sameLane;
   const eta = document.createElement("div");
   eta.className = "vcard__eta";
-  eta.append(
-    span("vcard__eta-value", String(data.etaS)),
-    span("vcard__eta-unit", "dtk"),
-    span("vcard__eta-label", `prediksi AI tiba di ${target.info.id}`),
-  );
+  // A stopped vehicle has no real arrival time (the model would only divide the distance by its minimum speed).
+  if (stopped)
+    eta.append(
+      span("vcard__eta-value vcard__eta-value--text", "Berhenti"),
+      span("vcard__eta-label", `prediksi AI ke ${where} lanjut saat bergerak`),
+    );
+  else
+    eta.append(
+      span("vcard__eta-value", String(data.etaS)),
+      span("vcard__eta-unit", "dtk"),
+      span("vcard__eta-label", `prediksi AI tiba di ${where}`),
+    );
   // The bar fills up as the predicted arrival approaches the threshold; full = green opens.
   const bar = document.createElement("div");
   bar.className = `vcard__bar${green ? " vcard__bar--green" : ""}`;
   bar.setAttribute("aria-hidden", "true");
   const fill = document.createElement("span");
-  const ratio = green || lead <= 0 ? 1 : Math.min(1, lead / Math.max(data.etaS, 1));
+  const ratio = green || lead <= 0 ? 1 : stopped ? 0 : Math.min(1, lead / Math.max(data.etaS, 1));
   fill.style.width = `${Math.round(ratio * 100)}%`;
   bar.append(fill);
+  const release = config.stopReleaseS;
   const state = green
     ? span(
         "vcard__state vcard__state--green",
-        `Lampu ${target.info.id} hijau untuk kendaraan ini`,
+        sameLane
+          ? `Lampu ${where} hijau · searah dengan ${holder}`
+          : stopped && release > 0
+            ? `Lampu ${where} hijau · dilepas bila berhenti ${duration(release)}`
+            : `Lampu ${where} hijau untuk kendaraan ini`,
       )
     : span(
         "vcard__state",
-        lead > 0
-          ? `Menunggu · hijau dibuka saat ETA ≤ ${lead} dtk`
-          : "Menunggu masuk radius simpang",
+        holder
+          ? `Menunggu · ${where} sedang hijau untuk ${holder} (datang lebih dulu)`
+          : stopped
+            ? "Menunggu kendaraan bergerak lagi"
+            : lead > 0
+              ? `Menunggu · hijau dibuka saat ETA ≤ ${lead} dtk`
+              : "Menunggu masuk radius simpang",
       );
   li.append(eta, bar, state);
   return li;

@@ -23,7 +23,7 @@ const engineOpts = { radiusM: 1000, passM: 50, passHysteresisM: 20, ttlS: 15, st
 const app = createApp({
   engine: new PriorityEngine([X], engineOpts),
   publish,
-  publicConfig: { topicPrefix: 'test', mqttWsUrl: 'wss://example.invalid/mqtt', radiusM: 1000, staleS: 15, simSpeedKmh: 60, etaLeadS: 40 },
+  publicConfig: { topicPrefix: 'test', mqttWsUrl: 'wss://example.invalid/mqtt', radiusM: 1000, staleS: 15, simSpeedKmh: 60, etaLeadS: 40, stopReleaseS: 180 },
   intersections: [X],
   missionCodes: new Set(['CODE-1']),
   demo: {
@@ -136,7 +136,7 @@ test('serves /.well-known/assetlinks.json from the dashboard dir (Android TWA ve
   const wellKnownApp = createApp({
     engine: new PriorityEngine([X], { radiusM: 1000, passM: 50, passHysteresisM: 20, ttlS: 15, staleS: 15 }),
     publish,
-    publicConfig: { topicPrefix: 'test', mqttWsUrl: 'wss://example.invalid/mqtt', radiusM: 1000, staleS: 15, simSpeedKmh: 60, etaLeadS: 40 },
+    publicConfig: { topicPrefix: 'test', mqttWsUrl: 'wss://example.invalid/mqtt', radiusM: 1000, staleS: 15, simSpeedKmh: 60, etaLeadS: 40, stopReleaseS: 180 },
     intersections: [X],
     missionCodes: new Set(),
     dashboardDir: dir,
@@ -252,7 +252,7 @@ test('POST /api/demo/quick-run needs no key, is capped, and the rest of the pane
 
 test('restoreDemoDefaults puts codes, radius, speed and the citizen point back, then republishes', () => {
   const codes = new Set(['AMB-01']);
-  const pub = { topicPrefix: 't', mqttWsUrl: '', radiusM: 850, staleS: 15, simSpeedKmh: 120, etaLeadS: 40 };
+  const pub = { topicPrefix: 't', mqttWsUrl: '', radiusM: 850, staleS: 15, simSpeedKmh: 120, etaLeadS: 40, stopReleaseS: 180 };
   const demo = {
     key: 'k',
     runner: new DemoRunner(route),

@@ -67,8 +67,9 @@ Daftar simpang `[{ id, name, lat, lng, axisA }]` (lihat tabel di bawah).
 
 ### `GET /api/config`
 
-`{ topicPrefix, mqttWsUrl, radiusM, staleS, simSpeedKmh, etaLeadS }`. Dipakai dashboard dan Citizen HUD. `etaLeadS` =
-ambang prediksi ETA (detik) untuk membuka lampu hijau; `0` = pemicu radius saja. `radiusM` dan
+`{ topicPrefix, mqttWsUrl, radiusM, staleS, simSpeedKmh, etaLeadS, stopReleaseS }`. Dipakai dashboard dan Citizen HUD.
+`etaLeadS` = ambang prediksi ETA (detik) untuk membuka lampu hijau; `0` = pemicu radius saja. `stopReleaseS` = lama
+kendaraan berhenti (< 3 km/j) sebelum lampu hijaunya dilepas; `0` = tidak pernah. `radiusM` dan
 `simSpeedKmh` (kecepatan simulasi rute di Driver PWA) bisa berubah dari Panel Demo.
 
 ### Panel Demo: `/api/demo` (khusus operator demo)

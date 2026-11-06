@@ -33,7 +33,6 @@ const el = {
 };
 
 const LABEL = { ambulance: "Ambulans", firetruck: "Pemadam" };
-const km = (m) => `${(m / 1000).toFixed(2)} km`;
 const runStatus = (r) =>
   r.arrived
     ? "sampai tujuan (Reset untuk ulang)"
@@ -161,7 +160,7 @@ export function initDemoPanel({ onToggle }) {
       ...(state.runs.length
         ? state.runs.map((r) => {
             const li = document.createElement("li");
-            li.textContent = `${LABEL[r.type]} ${r.vehicleId} · ${km(r.alongM)} / ${km(state.routeLengthM)} · ${runStatus(r)}`;
+            li.textContent = `${LABEL[r.type]} ${r.vehicleId} · ${whereOnRoute(r.alongM)} · ${runStatus(r)}`;
             return li;
           })
         : [
@@ -175,7 +174,9 @@ export function initDemoPanel({ onToggle }) {
     // One button: pause while anything moves, otherwise resume.
     // Arrived vehicles are done: only the ones still on the road can be paused or resumed.
     const onRoad = state.runs.filter((r) => !r.arrived);
-    el.pause.textContent = onRoad.some((r) => !r.paused) ? "Jeda" : "Lanjutkan";
+    el.pause.textContent = onRoad.some((r) => !r.paused)
+      ? "Jeda semua"
+      : "Lanjutkan semua";
     el.pause.disabled = onRoad.length === 0;
     el.clear.disabled = state.runs.length === 0;
 

@@ -47,6 +47,7 @@ const publicConfig: PublicConfig = {
   staleS: config.staleS,
   simSpeedKmh: demo.settings.speedKmh,
   etaLeadS: config.etaLeadS,
+  stopReleaseS: config.stopReleaseS,
 };
 
 // Overwrite any retained PRIORITY left over from a previous run, and any demo settings from another server.

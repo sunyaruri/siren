@@ -14,6 +14,8 @@ export interface PublicConfig {
   simSpeedKmh: number;
   /** Predictive trigger threshold (s); 0 = radius only. Lets the dashboard explain when green opens. */
   etaLeadS: number;
+  /** A held green is released after the vehicle has stopped this long (s); 0 = never. */
+  stopReleaseS: number;
 }
 
 export interface AppDeps {

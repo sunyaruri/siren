@@ -19,6 +19,22 @@ const STEPS = [
 /** `normalFirstStep` per junction in sketch.ino: staggers the three cycles. */
 export const FIRST_STEP = { S1: 0, S2: 2, S3: 1 };
 
+/**
+ * The lane (phase) a vehicle at lat/lng uses at an intersection `{ lat, lng, axisA }`: A when it sits within 45° of
+ * the main road axis (either direction), otherwise B. Mirrors phaseFor + bearingDeg in backend/src/priority.ts.
+ */
+export function laneAt(info, lat, lng) {
+  const rad = Math.PI / 180;
+  const dLng = (lng - info.lng) * rad;
+  const y = Math.sin(dLng) * Math.cos(lat * rad);
+  const x =
+    Math.cos(info.lat * rad) * Math.sin(lat * rad) -
+    Math.sin(info.lat * rad) * Math.cos(lat * rad) * Math.cos(dLng);
+  const bearing = (Math.atan2(y, x) / rad + 360) % 360;
+  const diff = Math.abs(bearing - info.axisA) % 180;
+  return Math.min(diff, 180 - diff) < 45 ? "A" : "B";
+}
+
 function setStep(s, index, now) {
   s.step = index;
   s.stepStart = now;

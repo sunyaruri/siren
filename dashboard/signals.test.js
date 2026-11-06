@@ -5,7 +5,16 @@ import {
   createSignal,
   enterNormal,
   enterPriority,
+  laneAt,
 } from "./signals.js";
+
+test("laneAt: main road (either side of the junction) is A, the cross street is B", () => {
+  const info = { lat: -8.17, lng: 113.7, axisA: 90 }; // main road runs east-west
+  assert.equal(laneAt(info, -8.17, 113.705), "A", "east of the junction");
+  assert.equal(laneAt(info, -8.17, 113.695), "A", "west of the junction");
+  assert.equal(laneAt(info, -8.165, 113.7), "B", "north of the junction");
+  assert.equal(laneAt(info, -8.175, 113.7005), "B", "south, slightly off-axis");
+});
 
 test("normal cycle: A green 10 s, A yellow 3 s, B green 10 s, B yellow 3 s, repeat", () => {
   const s = createSignal(0, 0);

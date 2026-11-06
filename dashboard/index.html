@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css?v=20261106j" />
+    <link rel="stylesheet" href="style.css?v=20261106m" />
   </head>
   <body>
     <main class="layout">
@@ -92,11 +92,12 @@
               </select>
               <select id="demo-start" aria-label="Mulai dari"></select>
             </div>
-            <div class="demo__row">
-              <button id="demo-run" class="btn btn--primary">Jalankan</button>
-              <button id="demo-pause" class="btn" disabled>Jeda</button>
-              <button id="demo-clear" class="btn" disabled>Hapus</button>
+            <div class="demo__actions">
+              <button id="demo-run" class="btn btn--primary">Tambah kendaraan</button>
+              <button id="demo-pause" class="btn" disabled>Jeda semua</button>
+              <button id="demo-clear" class="btn" disabled>Hapus semua</button>
             </div>
+            <p class="demo__hint">Tambah kendaraan selalu menambah satu kendaraan baru. Jeda, Lanjutkan, dan Hapus berlaku untuk semua kendaraan simulasi.</p>
             <ul id="demo-runs" class="demo__runs"></ul>
           </section>
 
@@ -135,6 +136,6 @@
       </aside>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script type="module" src="app.js?v=20261106j"></script>
+    <script type="module" src="app.js?v=20261106m"></script>
   </body>
 </html>

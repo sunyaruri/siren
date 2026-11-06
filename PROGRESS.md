@@ -213,6 +213,14 @@ Plan: `docs/superpowers/plans/2026-09-18-siren-backend-dashboard.md`
   sebelum Selesai Misi; status HUD "Menunggu prioritas lampu" agar tidak bertentangan dengan lampu siklus yang hijau.
   `npm test` 57/57; dicek di browser (dialog di tengah, Batal tetap aktif, Ya selesai mengakhiri misi).
 
+- 2026-11-06 — Edge case demo yang membingungkan juri: (1) kendaraan berhenti/dijeda menampilkan "Berhenti" alih-alih
+  ETA beku (ETA saat diam hanya jarak / kecepatan minimum), plus "dilepas bila berhenti 3 menit" saat memegang hijau
+  (`stopReleaseS` kini ada di `/api/config`). (2) Dua ambulans *Mulai demo* beruntun: kartu kedua dulu bilang "Menunggu"
+  padahal lampunya hijau karena searah; sekarang "hijau · searah dengan AMB-SIM1", atau "S1 sedang hijau untuk … (datang
+  lebih dulu)" bila beda jalur (`laneAt` di `signals.js`, mirror `phaseFor`). (3) Panel Demo: *Jalankan* jadi *Tambah
+  kendaraan*, *Jeda/Lanjutkan/Hapus* jadi "... semua" dengan keterangan, posisi kendaraan ditulis relatif simpang
+  ("S1 − 382 m"). `npm test` 58/58; dicek di browser lokal.
+
 ## Next
 
 - Simpan `sketch.ino` + `diagram.json` terbaru ke proyek Wokwi online (link untuk demo/video).
