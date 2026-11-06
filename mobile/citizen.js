@@ -1,4 +1,4 @@
-import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106l";
+import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106o";
 
 const LABEL = { ambulance: "Ambulans", firetruck: "Pemadam" };
 const COMPASS = ["utara", "timur laut", "timur", "tenggara", "selatan", "barat daya", "barat", "barat laut"];
@@ -12,6 +12,7 @@ const SIDE = {
 const MOVING_AWAY_TOLERANCE_M = 2; // GPS noise margin before "moving away" hides the alert
 const BUZZ_PATTERN = [400, 150, 400];
 const BUZZ_EVERY_MS = 3000;
+const STOP_KMH = 3; // below this a vehicle counts as stopped, same as the backend engine (priority.ts)
 // Fallback until the retained `demo` topic arrives: on the demo route between S1 and S2, heading toward the hospital.
 const DEFAULT_SIM_POSITION = { lat: -8.15914, lng: 113.7098, heading: 35 };
 
@@ -142,17 +143,20 @@ export function initCitizen(config) {
     }
 
     const { arrow, text } = side(threat);
+    // Stopped inside the radius (stuck in traffic, at a scene): still nearby, but not coming yet and its ETA is not
+    // meaningful, so no arrival time and no vibration until it moves again.
+    const halted = Number.isFinite(threat.msg.speed) && threat.msg.speed < STOP_KMH;
     show("danger", {
       arrow,
-      title: `${LABEL[threat.msg.type].toUpperCase()} MENDEKAT`,
+      title: `${LABEL[threat.msg.type].toUpperCase()} ${halted ? "BERHENTI" : "MENDEKAT"}`,
       direction: text,
       distance: formatDistance(threat.distanceM),
-      detail: "Menepi & beri jalan",
-      eta: etaText(threat.msg),
+      detail: halted ? "Siap beri jalan saat bergerak lagi" : "Menepi & beri jalan",
+      eta: halted ? "" : etaText(threat.msg),
     });
     // Repeats while the vehicle keeps closing in; Android only (iOS Safari has no Vibration API).
     const now = Date.now();
-    if (now - lastBuzz >= BUZZ_EVERY_MS) {
+    if (!halted && now - lastBuzz >= BUZZ_EVERY_MS) {
       navigator.vibrate?.(BUZZ_PATTERN);
       lastBuzz = now;
     }

@@ -5,8 +5,8 @@ import { PriorityEngine, phaseFor, type Command } from './priority.ts';
 
 const X: Intersection = { id: 'X', name: 'Test', lat: 0, lng: 0, axisA: 0 };
 const OPTS = { radiusM: 1000, passM: 50, passHysteresisM: 20, ttlS: 15, staleS: 15 };
-/** ETA = distance / current speed, so the expected ETAs are easy to compute by hand. */
-const ETA_IS_D_OVER_V = [0, 1, 0, 0, 0];
+/** ln ETA = ln distance − ln current speed: ETA = distance / speed, so the expected ETAs are easy to compute by hand. */
+const ETA_IS_D_OVER_V = [0, 1, -1, 0, 0];
 const M_PER_DEG = 111_195;
 const at = (northM: number, eastM = 0) => ({ lat: northM / M_PER_DEG, lng: eastM / M_PER_DEG });
 const fix = (p: { lat: number; lng: number }, vehicleId = 'AMB-01', type: VehicleType = 'ambulance'): GpsInput => ({
@@ -89,8 +89,8 @@ test('tick releases the intersection when its vehicle goes stale', () => {
 
 test('update reports the next intersection, with its ETA, until it is passed', () => {
   const engine = new PriorityEngine([X], OPTS, ETA_IS_D_OVER_V);
-  // First fix: no speed known yet, so the speed floor (2 m/s) caps the ETA at 1100 / 2 = 550 s.
-  assert.deepEqual(engine.update(fix(at(-1100)), 0).next, { id: 'X', name: 'Test', distanceM: 1100, mode: 'NORMAL', etaS: 550 });
+  // First fix: no speed known yet, so the speed floor (4 m/s) caps the ETA at 1100 / 4 = 275 s.
+  assert.deepEqual(engine.update(fix(at(-1100)), 0).next, { id: 'X', name: 'Test', distanceM: 1100, mode: 'NORMAL', etaS: 275 });
   // No `speed` sent: 110 m in 1 s from the previous fix, so 990 / 110 = 9 s.
   assert.deepEqual(engine.update(fix(at(-990)), 1000).next, { id: 'X', name: 'Test', distanceM: 990, mode: 'PRIORITY', etaS: 9 });
   for (const [i, north] of [-30, 10].entries()) engine.update(fix(at(north)), 2000 + i * 1000);
@@ -159,6 +159,7 @@ test('etaLeadS: a fast vehicle gets green as soon as it is inside the radius', (
   const fast = (northM: number) => ({ ...fix(at(northM)), speed: 216 }); // 60 m/s
   assert.deepEqual(engine.update(fast(-1050), 0).commands, []);
   assert.deepEqual(engine.update(fast(-990), 1000).commands, [
-    { intersectionId: 'X', cmd: { ...priority(1000)[0].cmd, etaS: 16 } }, // ~990 m / 60 m/s = 16.49 s
+    // 989.9993 m / 60 m/s = 16.49999 s: predictEtaS keeps 1 ms (16.5), the command rounds that to 17
+    { intersectionId: 'X', cmd: { ...priority(1000)[0].cmd, etaS: 17 } },
   ]);
 });

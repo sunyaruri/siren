@@ -1,6 +1,8 @@
 /**
- * ETA model: predicts how many seconds a vehicle needs to reach an intersection. A linear regression over hand-made
- * features, trained offline by `scripts/train-eta.ts`. The same `etaFeatures` runs at training and at runtime, so the
+ * ETA model: predicts how many seconds a vehicle needs to reach an intersection. A log-linear ridge regression,
+ * ln(ETA) = w · features, trained offline by `scripts/train-eta.ts`. Working in log space makes the model
+ * multiplicative like the physics (time = distance / speed): halving the speed roughly doubles the ETA, which a plain
+ * linear model over the same inputs could not learn. The same `etaFeatures` runs at training and at runtime, so the
  * model never sees a differently shaped input.
  */
 
@@ -12,14 +14,14 @@ export interface SpeedSample {
 
 /** How far back the speed history goes. */
 export const ETA_WINDOW_MS = 10_000;
-/** Floor for speeds used as divisors (≈ 7 km/h), so a stopped vehicle gives a large but finite time. */
-const MIN_V = 2;
+/** Floor for speeds (≈ 14 km/h) before taking their log, so a stopped vehicle gives a large but finite time. */
+const MIN_V = 4;
 /** Upper bound of every time-like feature and of the prediction. */
 const MAX_S = 600;
 /** m/s²; roughly what a heavy vehicle can brake or accelerate. */
 const MAX_ACCEL = 5;
 
-export const ETA_FEATURES = ['bias', 'distance/speedNow', 'distance/speedAvg10s', 'distanceKm', 'accel'] as const;
+export const ETA_FEATURES = ['bias', 'ln distance', 'ln speedNow', 'ln speedAvg10s', 'accel'] as const;
 
 export function etaFeatures(distanceM: number, samples: readonly SpeedSample[], now: number): number[] {
   const recent = samples.filter((s) => now - s.t <= ETA_WINDOW_MS);
@@ -29,18 +31,13 @@ export function etaFeatures(distanceM: number, samples: readonly SpeedSample[], 
   const dtS = first ? (now - first.t) / 1000 : 0;
   // Fixes milliseconds apart (or a bad speed reading) would give an absurd acceleration; keep it physical.
   const accel = dtS >= 1 ? Math.min(Math.max((v - first.v) / dtS, -MAX_ACCEL), MAX_ACCEL) : 0;
-  return [
-    1,
-    Math.min(distanceM / Math.max(v, MIN_V), MAX_S),
-    Math.min(distanceM / Math.max(vAvg, MIN_V), MAX_S),
-    distanceM / 1000,
-    accel,
-  ];
+  return [1, Math.log(Math.max(distanceM, 1)), Math.log(Math.max(v, MIN_V)), Math.log(Math.max(vAvg, MIN_V)), accel];
 }
 
+/** exp(w · features), in seconds, at most MAX_S. Rounded to 1 ms so float noise cannot cross a threshold. */
 export function predictEtaS(weights: readonly number[], features: readonly number[]): number {
-  const y = weights.reduce((sum, w, i) => sum + w * features[i], 0);
-  return Math.min(Math.max(y, 0), MAX_S);
+  const lnEta = weights.reduce((sum, w, i) => sum + w * features[i], 0);
+  return Math.round(Math.min(Math.exp(lnEta), MAX_S) * 1000) / 1000;
 }
 
 /** Ridge regression (least squares + `lambda`·‖w‖², bias not penalised) solved with Gaussian elimination. */

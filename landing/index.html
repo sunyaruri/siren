@@ -299,10 +299,12 @@
             <div class="ai-copy">
               <h3>Apa modelnya</h3>
               <p>
-                Regresi linear dengan regularisasi ridge, dibuat dan dilatih
-                sendiri, tanpa API AI pihak ketiga. Masukannya riwayat
-                kecepatan: jarak ÷ kecepatan sekarang, jarak ÷ rata-rata
-                kecepatan 10 detik terakhir, jarak, dan percepatan.
+                Regresi ridge log-linear, dibuat dan dilatih sendiri, tanpa
+                API AI pihak ketiga. Masukannya riwayat kecepatan: jarak,
+                kecepatan sekarang, rata-rata kecepatan 10 detik terakhir, dan
+                percepatan. Skala log membuatnya mengikuti fisika: ambulans
+                yang mengerem atau terjebak macet langsung mendapat perkiraan
+                tiba lebih lama.
               </p>
               <h3>Kenapa tidak cukup radius tetap</h3>
               <p>
@@ -333,19 +335,22 @@
                   <tbody>
                     <tr>
                       <th scope="row">Rata-rata galat (MAE)</th>
-                      <td class="num num--win">17,7 detik</td>
-                      <td class="num">30,7 detik</td>
+                      <td class="num num--win">22,1 detik</td>
+                      <td class="num">25,5 detik</td>
                     </tr>
                     <tr>
                       <th scope="row">60 detik terakhir sebelum simpang</th>
-                      <td class="num num--win">11,5 detik</td>
-                      <td class="num">13,4 detik</td>
+                      <td class="num">10,4 detik</td>
+                      <td class="num">9,8 detik</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
               <p class="small">
-                Data: 400 perjalanan, 89.693 sampel latih, 22.562 sampel uji.
+                Data: 400 perjalanan dengan macet sampai 1 km dan berhenti
+                sampai 90 detik; 107.782 sampel latih, 24.681 sampel uji. Dekat
+                simpang keduanya setara; model unggul saat kecepatan
+                berubah-ubah.
               </p>
               <div class="limit">
                 <p class="pill pill--wait">Catatan model</p>

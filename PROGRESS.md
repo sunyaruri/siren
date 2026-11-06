@@ -221,6 +221,15 @@ Plan: `docs/superpowers/plans/2026-09-18-siren-backend-dashboard.md`
   kendaraan*, *Jeda/Lanjutkan/Hapus* jadi "... semua" dengan keterangan, posisi kendaraan ditulis relatif simpang
   ("S1 − 382 m"). `npm test` 58/58; dicek di browser lokal.
 
+- 2026-11-06 — Kendaraan melambat/berhenti. (1) Model ETA diganti regresi ridge **log-linear** (ln ETA dari ln jarak, ln
+  kecepatan, ln rata-rata 10 dtk, percepatan; lantai kecepatan 4 m/s) dan dilatih ulang dengan macet sampai 1 km dan
+  berhenti sampai 90 dtk. Model lama hampir hanya memakai jarak (bobot `distanceKm` 73,9; fitur kecepatan ~0,1): rem 60
+  → 20 km/j menaikkan ETA 89 → 106 dtk padahal sebenarnya ~165; model baru 72 → 140–169. Data uji baru: MAE 22,05 dtk
+  (model lama 22,21; naif jarak ÷ kecepatan 25,45); 60 dtk terakhir 10,37 (lama 12,34; naif 9,79, dekat simpang naif
+  setara karena kecepatan di sana jarang berubah). (2) HUD driver mode simulasi: tombol *Normal / Pelan / Berhenti*
+  (20 km/j / 0). (3) Driver HUD dan Citizen HUD: di bawah 3 km/j tampil "Berhenti" alih-alih ETA beku; warga tidak
+  digetarkan selama kendaraan berhenti. `npm test` 59/59.
+
 ## Next
 
 - Simpan `sketch.ino` + `diagram.json` terbaru ke proyek Wokwi online (link untuk demo/video).

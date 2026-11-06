@@ -111,7 +111,7 @@ body {
 .landing {
   display: grid;
   align-content: start;
-  gap: 32px;
+  gap: 24px;
   width: var(--col);
   margin: 0 auto;
   padding: 16px var(--pad) 32px;
@@ -140,6 +140,84 @@ body {
   font-weight: 700;
   letter-spacing: 0.02em;
 }
+.app-header__link {
+  margin-left: auto;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  box-shadow: var(--card-shadow);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.app-header__link:hover {
+  background: #f9f9fb;
+}
+
+/* Hero: a crop of the real demo route (S1 zone), with the kind of state the apps show floating over it. */
+.hero {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border-radius: 24px;
+  box-shadow: var(--card-shadow);
+  background: var(--surface-2);
+}
+.hero__map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.75);
+}
+.hero__chip {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  max-width: calc(100% - 24px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 16px;
+}
+.hero__lamps {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 10px;
+  background: #1d1d1f;
+}
+.hero__lamps .lamp {
+  box-shadow: none;
+}
+.hero__lamps .lamp--green {
+  animation: lamp-pulse 2.4s ease-in-out infinite;
+}
+@keyframes lamp-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero__lamps .lamp--green {
+    animation: none;
+  }
+}
+.hero__chip-text {
+  display: grid;
+  min-width: 0;
+}
+.hero__chip-text strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.hero__chip-text span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .landing__intro {
   display: grid;
   gap: 8px;
@@ -147,6 +225,63 @@ body {
 .landing__sub {
   color: var(--muted);
   font-size: 16px;
+  line-height: 1.5;
+}
+.landing__label {
+  margin-bottom: -14px; /* sits with the cards, not in the 24px landing gap */
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.role__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.role__body .role__tags em {
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--chip);
+  color: var(--text);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+}
+.role--driver .role__tags em:last-child {
+  background: rgb(215 0 21 / 0.1);
+  color: var(--danger-strong);
+}
+
+/* How it works, as one quiet strip under the choices. */
+.steps {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+  list-style: none;
+}
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.steps b {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--priority);
+  color: var(--on-solid);
+  font-size: 12px;
 }
 
 .roles {
@@ -159,7 +294,7 @@ body {
   gap: 16px;
   width: 100%;
   min-height: 76px;
-  padding: 16px;
+  padding: 18px 16px;
   border: none;
   border-radius: var(--radius-panel);
   background: var(--surface-2);
@@ -179,11 +314,12 @@ body {
   transform: scale(0.985);
 }
 .role__icon {
+  align-self: start;
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   background: rgb(0 102 204 / 0.1);
   color: var(--ambulance);
   flex-shrink: 0;
@@ -424,6 +560,38 @@ body {
   font: 600 14px var(--font-mono);
   color: var(--text);
 }
+/* Route simulator speed (simulated missions only): shows the AI ETA reacting to braking and stopping. */
+.simspeed[hidden] {
+  display: none;
+}
+.simspeed__label {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.simspeed__options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--chip);
+}
+.simspeed__options button {
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font: 600 14px var(--font-ui);
+  cursor: pointer;
+}
+.simspeed__options button[aria-pressed="true"] {
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+
 /* Confirm dialog (native <dialog>: focus trap, Esc to cancel and the backdrop come for free). */
 .dialog {
   margin: auto; /* the global margin reset would otherwise pin the modal to the top-left */

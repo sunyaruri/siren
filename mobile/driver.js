@@ -1,11 +1,17 @@
-import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106l";
+import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106o";
 // Same traffic-light state machine the dashboard uses (a copy of the ESP32 firmware logic).
-import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority } from "/dashboard/signals.js?v=20261106l";
+import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority } from "/dashboard/signals.js?v=20261106o";
 
 const L = window.L;
 const DEFAULT_SIM_SPEED_KMH = 60;
 // ETA threshold for green, from /api/config (`etaLeadS`); the backend default until the config arrives.
 let etaLeadS = 40;
+// How long a stopped vehicle keeps its green (`stopReleaseS`, 0 = no limit).
+let stopReleaseS = 0;
+const STOP_KMH = 3; // below this the engine counts the vehicle as stopped (priority.ts)
+const SIM_SLOW_KMH = 20;
+/** Route simulator speed chosen in the HUD: "normal" (Panel Demo speed), "slow" or "stop". */
+let simMode = "normal";
 const VEHICLE_ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const COLOR_WORD = { red: "merah", yellow: "kuning", green: "hijau" };
@@ -28,6 +34,7 @@ const el = {
   gpsToggle: document.getElementById("gps-toggle"),
   btnStart: document.getElementById("btn-start"),
   btnStop: document.getElementById("btn-stop"),
+  simSpeed: document.getElementById("sim-speed"),
   confirmStop: document.getElementById("confirm-stop"),
   hud: document.getElementById("hud-card"),
   hudState: document.getElementById("hud-state"),
@@ -176,6 +183,8 @@ export function initDriver({ getJson }) {
     const config = await getJson(`${backendUrl}/api/config`).catch(() => ({}));
     const simSpeedKmh = config.simSpeedKmh ?? DEFAULT_SIM_SPEED_KMH;
     if (Number.isFinite(config.etaLeadS)) etaLeadS = config.etaLeadS;
+    if (Number.isFinite(config.stopReleaseS)) stopReleaseS = config.stopReleaseS;
+    el.simSpeed.hidden = useRealGps;
     const source = useRealGps ? makeGpsSource() : makeRouteSimulator(route, simSpeedKmh);
     if (useRealGps) gpsSource = source;
     startSignals(config, await getJson(`${backendUrl}/api/intersections`).catch(() => []));
@@ -199,7 +208,11 @@ export function initDriver({ getJson }) {
     let lastPos = null;
 
     tickHandle = setInterval(async () => {
-      const reading = useRealGps ? source.next() : { pos: source.next(1), speedKmh: simSpeedKmh, headingDeg: null };
+      // The simulator walks at simSpeedKmh, so a shorter time step moves it slower (0 = stays put).
+      const simKmh = simMode === "stop" ? 0 : simMode === "slow" ? Math.min(SIM_SLOW_KMH, simSpeedKmh) : simSpeedKmh;
+      const reading = useRealGps
+        ? source.next()
+        : { pos: source.next(simKmh / simSpeedKmh), speedKmh: simKmh, headingDeg: null };
       if (!reading?.pos) return;
       const [lat, lng] = reading.pos;
 
@@ -237,7 +250,7 @@ export function initDriver({ getJson }) {
         });
         if (res.ok) {
           const body = await res.json();
-          applyHud(body.nextIntersection, myLamp(body.nextIntersection, lat, lng));
+          applyHud(body.nextIntersection, myLamp(body.nextIntersection, lat, lng), reading.speedKmh);
         } else if (res.status === 401) {
           stop("Kode ditolak", "Kode misi ditolak"); // code revoked mid-mission: stop sending, lights fall back via ttl
         }
@@ -311,7 +324,7 @@ export function initDriver({ getJson }) {
   }
 
   // Plain-language HUD: the engine's NORMAL/PRIORITY becomes "waiting" vs "green for you".
-  function applyHud(next, lamp = null) {
+  function applyHud(next, lamp = null, speedKmh = null) {
     if (stopped) return; // a request still in flight when the mission ended
     showLamp(next?.id, next ? lamp : null);
     if (!next) {
@@ -325,18 +338,25 @@ export function initDriver({ getJson }) {
     const opening = next.mode === "PRIORITY" && lamp !== null && lamp !== "green";
     const green = next.mode === "PRIORITY" && !opening;
     const hasEta = Number.isFinite(next.etaS);
+    // A stopped vehicle has no real arrival time: the model would only divide the distance by its minimum speed.
+    const halted = Number.isFinite(speedKmh) && speedKmh < STOP_KMH;
+    const holdFor = stopReleaseS % 60 === 0 ? `${stopReleaseS / 60} menit` : `${stopReleaseS} dtk`;
     showHud(green ? "green" : "wait", {
       // "Waiting for priority", not "waiting for green": the lamp row may show a normal-cycle green at the same time.
       status: green ? "Lampu hijau untuk Anda" : opening ? "Membuka lampu hijau…" : "Menunggu prioritas lampu",
       // Small label + big value: the value alone stays on one line even on a 320px phone.
-      etaLabel: hasEta ? `Perkiraan AI · tiba di ${next.id} dalam` : "Simpang berikutnya",
-      eta: hasEta ? formatEta(next.etaS) : next.id,
+      etaLabel: !hasEta ? "Simpang berikutnya" : halted ? `Perkiraan AI · ke ${next.id}` : `Perkiraan AI · tiba di ${next.id} dalam`,
+      eta: !hasEta ? next.id : halted ? "Berhenti" : formatEta(next.etaS),
       name: next.name,
       distance: `${Math.round(next.distanceM)} m lagi`,
       hint: green
-        ? `${next.id} tetap hijau sampai Anda melewatinya.`
+        ? halted && stopReleaseS > 0
+          ? `${next.id} tetap hijau maks. ${holdFor} selama Anda berhenti.`
+          : `${next.id} tetap hijau sampai Anda melewatinya.`
         : opening
           ? "Jalur silang kuning 3 detik, lalu jalur Anda hijau."
+        : halted
+          ? "Perkiraan tiba dihitung lagi saat Anda bergerak."
         : etaLeadS > 0
           ? `Dibuka otomatis saat perkiraan tiba ≤ ${etaLeadS} dtk.`
           : "Dibuka otomatis saat Anda masuk radius simpang.",
@@ -363,6 +383,13 @@ export function initDriver({ getJson }) {
   }
 
   // Ending a mission releases the lights, so it asks first; once ended the same button just goes back to the menu.
+  el.simSpeed.addEventListener("click", (e) => {
+    const mode = e.target.closest("button[data-mode]")?.dataset.mode;
+    if (!mode) return;
+    simMode = mode;
+    for (const b of el.simSpeed.querySelectorAll("button[data-mode]"))
+      b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
+  });
   el.btnStop.addEventListener("click", () => {
     if (stopped || !el.confirmStop?.showModal) return stop();
     el.confirmStop.returnValue = "";

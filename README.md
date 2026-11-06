@@ -96,16 +96,21 @@ Cara menjalankan di wokwi.com:
 
 ## Prediksi ETA (AI)
 
-Pemicu lampu memakai model machine learning (regresi linear / ridge) yang memprediksi berapa detik lagi kendaraan
+Pemicu lampu memakai model machine learning (regresi ridge log-linear) yang memprediksi berapa detik lagi kendaraan
 sampai di simpang. Lampu hijau dibuka saat kendaraan di dalam radius, sedang mendekat, **dan** prediksi ETA ≤
 `ETA_LEAD_S`. Jadi kendaraan cepat dapat hijau lebih awal, kendaraan lambat/terjebak tidak menahan lampu terlalu lama.
 
-- Fitur (`backend/src/eta.ts`): jarak ÷ kecepatan sekarang, jarak ÷ rata-rata kecepatan 10 dtk, jarak (km), percepatan.
-  Kecepatan diambil dari `speed` GPS, atau dihitung dari selisih posisi bila `speed` tidak dikirim.
-- Pelatihan: `npm run train:eta` (di `backend/`) mensimulasikan 400 perjalanan di rute demo (kecepatan acak, macet,
-  berhenti, melambat di tikungan, noise GPS 4 m), melatih model, dan menulis bobotnya ke `src/eta-model.ts`.
-- Hasil di perjalanan uji (data yang tidak dipakai melatih): MAE 17,7 dtk vs 30,7 dtk untuk cara naif jarak ÷
-  kecepatan; dalam 60 dtk terakhir sebelum simpang 11,5 vs 13,4 dtk.
+- Model (`backend/src/eta.ts`): ln ETA = w · [1, ln jarak, ln kecepatan sekarang, ln rata-rata kecepatan 10 dtk,
+  percepatan], kecepatan minimal 4 m/s. Skala log membuatnya mengikuti fisika (kecepatan separuh → ETA kira-kira dua
+  kali), jadi ambulans yang mengerem langsung mendapat ETA lebih lama. Kecepatan diambil dari `speed` GPS, atau
+  dihitung dari selisih posisi bila `speed` tidak dikirim.
+- Pelatihan: `npm run train:eta` (di `backend/`) mensimulasikan 400 perjalanan di rute demo (kecepatan acak, macet
+  sampai 1 km, berhenti sampai 90 dtk, melambat di tikungan, noise GPS 4 m), melatih model, dan menulis bobotnya ke
+  `src/eta-model.ts`.
+- Hasil di perjalanan uji (data yang tidak dipakai melatih): MAE 22,1 dtk vs 25,5 dtk untuk cara naif jarak ÷
+  kecepatan; dalam 60 dtk terakhir sebelum simpang keduanya setara (10,4 vs 9,8 dtk). Model regresi linear versi
+  sebelumnya di data uji yang sama: 22,2 dan 12,3 dtk, dan hampir tidak bereaksi saat kendaraan melambat (rem 60 → 20
+  km/j: ETA 89 → 106 dtk, padahal sebenarnya ~165 dtk; model baru 72 → 140–169 dtk).
 - Keterbatasan: data latih masih sintetis. Langkah berikutnya: latih ulang dari rekaman GPS perjalanan asli.
 
 ## Konfigurasi (env / `backend/.env`)

@@ -1,5 +1,5 @@
-import { initDriver } from "./driver.js?v=20261106l";
-import { initCitizen } from "./citizen.js?v=20261106l";
+import { initDriver } from "./driver.js?v=20261106o";
+import { initCitizen } from "./citizen.js?v=20261106o";
 
 const views = {
   landing: document.getElementById("view-landing"),

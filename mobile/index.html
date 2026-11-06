@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css?v=20261106l" />
+    <link rel="stylesheet" href="style.css?v=20261106o" />
   </head>
   <body>
     <!-- Landing: pilih peran -->
@@ -23,21 +23,32 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18v-6a5 5 0 1 1 10 0v6" /><path d="M5 21a1 1 0 0 0 1-1v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1a1 1 0 0 0 1 1z" /><path d="M21 12h1" /><path d="M18.5 4.5 18 5" /><path d="M2 12h1" /><path d="M12 2v1" /><path d="m4.929 4.929.707.707" /><path d="M12 12v6" /></svg>
           </span>
           <span class="app-header__name">SIREN</span>
+          <a class="app-header__link" href="/dashboard/">Command Center</a>
         </header>
 
+        <figure class="hero">
+          <img class="hero__map" src="img/hero.webp" width="900" height="600" alt="" />
+          <figcaption class="hero__chip glass">
+            <span class="hero__lamps" aria-hidden="true"><i class="lamp lamp--green"></i><i class="lamp lamp--red"></i></span>
+            <span class="hero__chip-text"><strong>S1 hijau untuk ambulans</strong><span>Prediksi AI: tiba 18 dtk lagi</span></span>
+          </figcaption>
+        </figure>
+
         <div class="landing__intro">
-          <h1 class="title-large">Pilih mode</h1>
-          <p class="landing__sub">Lampu hijau otomatis untuk ambulans dan pemadam kebakaran.</p>
+          <h1 class="title-large">Jalan untuk yang darurat.</h1>
+          <p class="landing__sub">Lampu simpang berubah hijau otomatis saat ambulans atau pemadam mendekat, dan warga di sekitar mendapat peringatan.</p>
         </div>
 
-        <div class="roles">
+        <p class="landing__label" id="roles-label">Pilih mode</p>
+        <div class="roles" role="group" aria-labelledby="roles-label">
           <button id="btn-driver" class="role role--driver">
             <span class="role__icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" /></svg>
             </span>
             <span class="role__body">
               <strong>Petugas Darurat</strong>
-              <span>Ambulans dan pemadam, dengan Kode Misi</span>
+              <span>Kirim posisi, lampu di depan dibuka untuk Anda</span>
+              <span class="role__tags"><em>Prediksi AI</em><em>Kode demo DEMO-112</em></span>
             </span>
             <span class="role__chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></span>
           </button>
@@ -47,11 +58,18 @@
             </span>
             <span class="role__body">
               <strong>Warga &amp; Pengendara</strong>
-              <span>Peringatan saat kendaraan darurat mendekat</span>
+              <span>Tahu lebih dulu saat kendaraan darurat mendekat</span>
+              <span class="role__tags"><em>Arah &amp; jarak</em><em>Getar</em><em>Tanpa daftar</em></span>
             </span>
             <span class="role__chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></span>
           </button>
         </div>
+
+        <ol class="steps" aria-label="Cara kerja">
+          <li><b>1</b>GPS ambulans dikirim tiap detik</li>
+          <li><b>2</b>AI memprediksi waktu tiba di simpang</li>
+          <li><b>3</b>Lampu hijau dibuka, warga diberi tahu</li>
+        </ol>
       </div>
     </main>
 
@@ -114,6 +132,14 @@
             <p id="hud-lamp" class="hud__lamp" hidden><i id="hud-lamp-dot" class="lamp" aria-hidden="true"></i><span id="hud-lamp-text"></span></p>
             <p id="hud-hint" class="hud__hint">Lampu simpang berjalan normal sampai Anda mendekat.</p>
           </section>
+          <div id="sim-speed" class="simspeed" hidden>
+            <p id="sim-speed-label" class="simspeed__label">Simulasi kecepatan: lihat perkiraan AI berubah</p>
+            <div class="simspeed__options" role="group" aria-labelledby="sim-speed-label">
+              <button type="button" data-mode="normal" aria-pressed="true">Normal</button>
+              <button type="button" data-mode="slow" aria-pressed="false">Pelan</button>
+              <button type="button" data-mode="stop" aria-pressed="false">Berhenti</button>
+            </div>
+          </div>
           <button id="btn-stop" type="button" class="btn btn--danger">Selesai Misi</button>
           <dialog id="confirm-stop" class="dialog" aria-labelledby="confirm-stop-title" aria-describedby="confirm-stop-text">
             <form method="dialog">
@@ -165,6 +191,6 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script type="module" src="app.js?v=20261106l"></script>
+    <script type="module" src="app.js?v=20261106o"></script>
   </body>
 </html>
