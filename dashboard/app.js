@@ -1,6 +1,6 @@
 import mqtt from "https://cdn.jsdelivr.net/npm/mqtt@5.16.0/dist/mqtt.esm.js";
-import { initDemoPanel } from "./demo-panel.js?v=20261106m";
-import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority, laneAt } from "./signals.js?v=20261106m";
+import { initDemoPanel } from "./demo-panel.js?v=20261106p";
+import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority, laneAt } from "./signals.js?v=20261106p";
 
 const L = window.L;
 const LABEL = { ambulance: "Ambulans", firetruck: "Pemadam" };
@@ -240,7 +240,7 @@ function vehiclesEmpty() {
   li.className = "empty-state";
   const text = document.createElement("p");
   text.textContent =
-    "Belum ada kendaraan darurat aktif. Tekan Mulai demo untuk menjalankan ambulans simulasi menuju simpang S1, atau buka aplikasi Driver di /mobile/.";
+    "Belum ada kendaraan darurat aktif. Tekan Mulai demo untuk menjalankan ambulans simulasi menuju simpang S1, atau buka aplikasi Petugas Darurat di /mobile/.";
   const btn = document.createElement("button");
   btn.className = "btn btn--primary";
   btn.textContent = "Mulai demo";
@@ -358,7 +358,7 @@ function vehicleCard(id, v) {
           : stopped
             ? "Menunggu kendaraan bergerak lagi"
             : lead > 0
-              ? `Menunggu · hijau dibuka saat ETA ≤ ${lead} dtk`
+              ? `Menunggu · hijau dibuka saat prediksi tiba ≤ ${lead} dtk`
               : "Menunggu masuk radius simpang",
       );
   li.append(eta, bar, state);

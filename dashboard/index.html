@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css?v=20261106m" />
+    <link rel="stylesheet" href="style.css?v=20261106p" />
   </head>
   <body>
     <main class="layout">
@@ -33,7 +33,7 @@
           <ol class="flow">
             <li id="step-gps" class="flow__step">
               <span class="flow__num" aria-hidden="true">1</span>
-              <span><b>Ambulans mengirim GPS</b><small>tiap 1 detik dari aplikasi driver</small></span>
+              <span><b>Ambulans mengirim GPS</b><small>tiap 1 detik dari aplikasi Petugas Darurat</small></span>
             </li>
             <li id="step-ai" class="flow__step">
               <span class="flow__num" aria-hidden="true">2</span>
@@ -84,7 +84,7 @@
               <span>Kecepatan <output id="demo-speed-out"></output></span>
               <input id="demo-speed" type="range" min="20" max="200" step="10" />
             </label>
-            <p class="demo__hint">Juga dipakai simulasi rute di HP driver (untuk misi yang baru dimulai).</p>
+            <p class="demo__hint">Juga dipakai simulasi rute di HP petugas (untuk misi yang baru dimulai).</p>
             <div class="demo__row">
               <select id="demo-type" aria-label="Jenis kendaraan">
                 <option value="ambulance">Ambulans</option>
@@ -108,7 +108,7 @@
               <input id="demo-citizen" type="range" min="0" step="10" />
             </label>
             <div id="demo-citizen-presets" class="demo__row"></div>
-            <p class="demo__hint">Berlaku untuk HP warga yang mencentang “Posisi simulasi”.</p>
+            <p class="demo__hint">Berlaku untuk HP warga yang mengaktifkan “Posisi simulasi”.</p>
           </section>
 
           <section>
@@ -130,12 +130,12 @@
 
           <div class="demo__reset">
             <button id="demo-reset" class="btn btn--danger">Reset demo</button>
-            <p class="demo__hint">Semua simpang NORMAL, kendaraan simulasi kembali ke titik mulainya (dijeda). Tekan Lanjutkan untuk jalan lagi.</p>
+            <p class="demo__hint">Semua simpang kembali ke siklus normal, kendaraan simulasi kembali ke titik mulainya (dijeda). Tekan Lanjutkan untuk jalan lagi.</p>
           </div>
         </div>
       </aside>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script type="module" src="app.js?v=20261106m"></script>
+    <script type="module" src="app.js?v=20261106p"></script>
   </body>
 </html>

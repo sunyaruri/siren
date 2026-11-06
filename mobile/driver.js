@@ -1,6 +1,6 @@
-import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106o";
+import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106p";
 // Same traffic-light state machine the dashboard uses (a copy of the ESP32 firmware logic).
-import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority } from "/dashboard/signals.js?v=20261106o";
+import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority } from "/dashboard/signals.js?v=20261106p";
 
 const L = window.L;
 const DEFAULT_SIM_SPEED_KMH = 60;
@@ -13,6 +13,9 @@ const SIM_SLOW_KMH = 20;
 /** Route simulator speed chosen in the HUD: "normal" (Panel Demo speed), "slow" or "stop". */
 let simMode = "normal";
 const VEHICLE_ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
+// Everyone shares one demo server: a random default ID keeps two people who just press Mulai Misi from being merged
+// into one vehicle.
+document.getElementById("vehicle-id").value = `AMB-${String(Math.floor(Math.random() * 90) + 10)}`;
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const COLOR_WORD = { red: "merah", yellow: "kuning", green: "hijau" };
 
@@ -382,7 +385,11 @@ export function initDriver({ getJson }) {
     window.location.reload(); // second tap: back to the landing, same as the topbar back button
   }
 
-  // Ending a mission releases the lights, so it asks first; once ended the same button just goes back to the menu.
+  // Keep the random default ID's prefix in step with the vehicle type (AMB = ambulans, DMK = pemadam).
+  el.vehicleType.addEventListener("change", () => {
+    const id = el.vehicleId.value.match(/^(AMB|DMK)-(\d\d)$/);
+    if (id) el.vehicleId.value = `${el.vehicleType.value === "firetruck" ? "DMK" : "AMB"}-${id[2]}`;
+  });
   el.simSpeed.addEventListener("click", (e) => {
     const mode = e.target.closest("button[data-mode]")?.dataset.mode;
     if (!mode) return;
@@ -390,6 +397,7 @@ export function initDriver({ getJson }) {
     for (const b of el.simSpeed.querySelectorAll("button[data-mode]"))
       b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
   });
+  // Ending a mission releases the lights, so it asks first; once ended the same button just goes back to the menu.
   el.btnStop.addEventListener("click", () => {
     if (stopped || !el.confirmStop?.showModal) return stop();
     el.confirmStop.returnValue = "";

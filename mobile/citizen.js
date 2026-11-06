@@ -1,4 +1,4 @@
-import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106o";
+import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106p";
 
 const LABEL = { ambulance: "Ambulans", firetruck: "Pemadam" };
 const COMPASS = ["utara", "timur laut", "timur", "tenggara", "selatan", "barat daya", "barat", "barat laut"];
@@ -97,8 +97,8 @@ export function initCitizen(config) {
     `Layar ini berubah merah-biru dan HP bergetar saat ambulans atau pemadam mendekat dalam ${formatDistance(config.radiusM)}, lengkap dengan arah dan jaraknya.`;
   const hintText = () =>
     el.sim.checked
-      ? "Posisi simulasi aktif. Jalankan kendaraan dari Panel Demo di dashboard untuk melihat peringatan."
-      : "Uji coba jauh dari Jember: aktifkan Posisi simulasi di bawah, lalu jalankan kendaraan dari Panel Demo.";
+      ? "Posisi simulasi aktif. Tekan Mulai demo di Command Center (dashboard) untuk melihat peringatan."
+      : "Uji coba jauh dari Jember: aktifkan Posisi simulasi di bawah, lalu tekan Mulai demo di Command Center.";
 
   // Optional `nextId`/`etaS` on the vehicle message: when it reaches its next intersection (not this citizen).
   function etaText(msg) {

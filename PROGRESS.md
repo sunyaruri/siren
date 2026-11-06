@@ -230,6 +230,14 @@ Plan: `docs/superpowers/plans/2026-09-18-siren-backend-dashboard.md`
   (20 km/j / 0). (3) Driver HUD dan Citizen HUD: di bawah 3 km/j tampil "Berhenti" alih-alih ETA beku; warga tidak
   digetarkan selama kendaraan berhenti. `npm test` 59/59.
 
+- 2026-11-06 — Audit teks sebelum kirim form: istilah aplikasi diseragamkan jadi "Petugas Darurat" (dashboard dulu
+  "aplikasi Driver/driver", landing "Aplikasi sopir"); "Centang" jadi "Aktifkan" (Posisi simulasi berupa switch);
+  "ETA"/"NORMAL" di kartu dan Panel Demo jadi "prediksi tiba"/"siklus normal"; petunjuk HP warga kini menyuruh menekan
+  *Mulai demo* di Command Center (dulu Panel Demo, yang butuh kunci); status awal warga "Menyambung…" bukan "Terputus";
+  landing menyebut pelepasan lampu saat berhenti 3 menit, tombol Pelan/Berhenti, dan prediksi tiba di HUD petugas.
+  ID kendaraan default acak (`AMB-NN`/`DMK-NN`) agar dua juri tidak bentrok di server demo yang sama. Dicek: hitung
+  mundur ETA di dashboard turun ~1 dtk/dtk dan hijau tepat di 40 dtk.
+
 ## Next
 
 - Simpan `sketch.ino` + `diagram.json` terbaru ke proyek Wokwi online (link untuk demo/video).

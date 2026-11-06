@@ -242,7 +242,7 @@
             <li class="card step">
               <span class="step__n" aria-hidden="true">1</span>
               <h3>GPS tiap 1 detik</h3>
-              <p>Aplikasi sopir mengirim posisi dan kecepatan ke server.</p>
+              <p>Aplikasi Petugas Darurat mengirim posisi dan kecepatan ke server.</p>
             </li>
             <li class="card step">
               <span class="step__n" aria-hidden="true">2</span>
@@ -416,8 +416,9 @@
               <p class="label">Untuk sopir ambulans dan pemadam</p>
               <h3>Aplikasi Petugas Darurat</h3>
               <p>
-                Wajib Kode Misi. Menampilkan simpang berikutnya, jaraknya, dan
-                status lampu. Posisi dari GPS asli atau simulasi rute.
+                Wajib Kode Misi. Menampilkan simpang berikutnya, prediksi waktu
+                tiba, jarak, dan warna lampu jalur Anda. Posisi dari GPS asli
+                atau simulasi rute.
               </p>
             </article>
 
@@ -510,7 +511,8 @@
               <p>
                 Perintah prioritas berlaku 15 detik dan diperbarui server tiap 5
                 detik. Jika koneksi putus, ESP32 kembali sendiri ke siklus
-                normal.
+                normal. Ambulans yang berhenti lebih dari 3 menit (misalnya
+                sudah tiba di lokasi) juga otomatis melepas lampunya.
               </p>
             </li>
             <li class="card">
@@ -588,6 +590,10 @@
                     Klik <strong>Mulai Misi</strong>. Mode simulasi rute bisa
                     dicoba dari luar Jember.
                   </li>
+                  <li>
+                    Tekan <strong>Pelan</strong> atau <strong>Berhenti</strong>:
+                    prediksi AI ikut berubah.
+                  </li>
                 </ol>
               </div>
               <div class="demo__col">
@@ -595,9 +601,9 @@
                 <ol>
                   <li>
                     Buka <a href="/mobile/"><code>/mobile/</code></a
-                    >, pilih <strong>Warga / Pengendara</strong>.
+                    >, pilih <strong>Warga &amp; Pengendara</strong>.
                   </li>
-                  <li>Centang <strong>Posisi simulasi</strong>.</li>
+                  <li>Aktifkan <strong>Posisi simulasi</strong>.</li>
                   <li>Tunggu peringatan muncul saat kendaraan mendekat.</li>
                 </ol>
               </div>
