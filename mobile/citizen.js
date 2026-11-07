@@ -1,4 +1,4 @@
-import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106p";
+import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261107a";
 
 const LABEL = { ambulance: "Ambulans", firetruck: "Pemadam" };
 const COMPASS = ["utara", "timur laut", "timur", "tenggara", "selatan", "barat daya", "barat", "barat laut"];
@@ -14,7 +14,7 @@ const BUZZ_PATTERN = [400, 150, 400];
 const BUZZ_EVERY_MS = 3000;
 const STOP_KMH = 3; // below this a vehicle counts as stopped, same as the backend engine (priority.ts)
 // Fallback until the retained `demo` topic arrives: on the demo route between S1 and S2, heading toward the hospital.
-const DEFAULT_SIM_POSITION = { lat: -8.15914, lng: 113.7098, heading: 35 };
+const DEFAULT_SIM_POSITION = { lat: -8.691029, lng: 115.189751, heading: 45 };
 
 const el = {
   status: document.getElementById("citizen-status"),
@@ -98,7 +98,7 @@ export function initCitizen(config) {
   const hintText = () =>
     el.sim.checked
       ? "Posisi simulasi aktif. Tekan Mulai demo di Command Center (dashboard) untuk melihat peringatan."
-      : "Uji coba jauh dari Jember: aktifkan Posisi simulasi di bawah, lalu tekan Mulai demo di Command Center.";
+      : "Uji coba jauh dari Denpasar: aktifkan Posisi simulasi di bawah, lalu tekan Mulai demo di Command Center.";
 
   // Optional `nextId`/`etaS` on the vehicle message: when it reaches its next intersection (not this citizen).
   function etaText(msg) {

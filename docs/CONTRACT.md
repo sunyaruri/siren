@@ -148,22 +148,23 @@ Dikirim saat server start dan tiap kali Panel Demo berubah. Citizen HUD yang men
 - Keep-alive MQTT 60 detik (`mqtt.setKeepAlive(60)`). Wokwi sering berjalan lebih lambat dari waktu nyata, dan dengan default 15 detik broker memutus koneksi.
 - Tes tanpa backend: `npx mqtt pub -h broker.hivemq.com -t "siren-polnes26/intersection/S1/cmd" -m '{"mode":"PRIORITY","phase":"A","vehicleId":"AMB-01","vehicleType":"ambulance","ttl":15,"ts":0}'`
 
-## Simpang demo (Jember)
+## Simpang demo (Denpasar, Bali)
 
 | id | Nama | lat | lng | axisA |
 |---|---|---|---|---|
-| S1 | Simpang PB Sudirman – Bedadung – Anggrek | -8.166863 | 113.704253 | 35 |
-| S2 | Simpang PB Sudirman – Mastrip – Sroedji | -8.156951 | 113.711360 | 35 |
-| S3 | Simpang Sroedji – Slamet Riyadi – dr. Soebandi | -8.151537 | 113.717539 | 54 |
+| S1 | Simpang Imam Bonjol – Pulau Galang | -8.6956617 | 115.1870329 | 35 |
+| S2 | Simpang Imam Bonjol – Gunung Soputan | -8.6892329 | 115.1917795 | 32 |
+| S3 | Simpang Imam Bonjol – Teuku Umar Barat | -8.6819342 | 115.1969248 | 35 |
 
 ## Rute demo (untuk Route Simulator mobile)
 
-Jl. Gajah Mada (Kaliwates) → RSUD dr. Soebandi, ±4,0 km. 20 titik `[lat, lng]` (rute penuh 117 titik ada di
-`backend/scripts/route.json` dan salinannya `mobile/data/route.json`; interpolasi antar-titik agar gerakan halus):
+Jl. Nakula (Kuta) → Jl. Imam Bonjol → Jl. Teuku Umar → RSUP Prof. dr. I.G.N.G. Ngoerah, ±5,1 km. 20 titik `[lat, lng]`
+(rute penuh 237 titik ada di `backend/scripts/route.json` dan salinannya `mobile/data/route.json`; interpolasi
+antar-titik agar gerakan halus):
 
 ```json
-[[-8.172057,113.694133],[-8.171326,113.696342],[-8.170465,113.697997],[-8.169704,113.699432],[-8.168804,113.701003],
- [-8.168039,113.702525],[-8.167021,113.704142],[-8.165426,113.705289],[-8.163947,113.706332],[-8.161687,113.707953],
- [-8.160866,113.708537],[-8.159372,113.709615],[-8.15707,113.711275],[-8.155306,113.712581],[-8.154937,113.712937],
- [-8.153658,113.71464],[-8.15251,113.716203],[-8.151376,113.717208],[-8.150689,113.715433],[-8.150439,113.713894]]
+[[-8.699574,115.179509],[-8.699977,115.182318],[-8.700258,115.185046],[-8.698727,115.185328],[-8.695921,115.186717],
+ [-8.693199,115.188336],[-8.690537,115.19027],[-8.688666,115.191952],[-8.688002,115.192347],[-8.685103,115.194452],
+ [-8.682675,115.196398],[-8.681531,115.197555],[-8.681098,115.200954],[-8.67996,115.203854],[-8.678158,115.205352],
+ [-8.677028,115.206161],[-8.676034,115.206676],[-8.676105,115.207133],[-8.676769,115.209954],[-8.675111,115.210838]]
 ```

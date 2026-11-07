@@ -31,8 +31,8 @@ const demo: DemoDeps = {
   key: config.demoKey,
   runner: new DemoRunner(route),
   route,
-  // 2350 m along the route = Jl. PB Sudirman between S1 and S2, the Citizen HUD's old fixed demo point.
-  settings: { citizenAlongM: 2350, speedKmh: 60 },
+  // 1783 m along the route = Jl. Imam Bonjol about 300 m before S2, same point as the Citizen HUD's DEFAULT_SIM_POSITION.
+  settings: { citizenAlongM: 1783, speedKmh: 60 },
   engineOpts: config,
   lastAdminAt: 0,
 };

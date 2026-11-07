@@ -1,6 +1,6 @@
 import mqtt from "https://cdn.jsdelivr.net/npm/mqtt@5.16.0/dist/mqtt.esm.js";
-import { initDemoPanel } from "./demo-panel.js?v=20261106p";
-import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority, laneAt } from "./signals.js?v=20261106p";
+import { initDemoPanel } from "./demo-panel.js?v=20261107a";
+import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority, laneAt } from "./signals.js?v=20261107a";
 
 const L = window.L;
 const LABEL = { ambulance: "Ambulans", firetruck: "Pemadam" };
@@ -83,10 +83,10 @@ if (route.length > 1) {
   L.polyline(route, { color: token("--text"), weight: 4, opacity: 0.22 }).addTo(map);
   L.marker(route[0], { icon: routePin("start", "Mulai") })
     .addTo(map)
-    .bindTooltip("Titik awal rute · Jl. Gajah Mada");
+    .bindTooltip("Titik awal rute · Jl. Nakula, Kuta");
   L.marker(route[route.length - 1], { icon: routePin("end", "Tujuan") })
     .addTo(map)
-    .bindTooltip("Titik akhir rute · RSUD dr. Soebandi");
+    .bindTooltip("Titik akhir rute · RSUP Prof. Ngoerah");
 }
 
 /** id -> { info, zone, dot, cmd, expiresAt } */

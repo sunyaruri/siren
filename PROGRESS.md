@@ -238,6 +238,14 @@ Plan: `docs/superpowers/plans/2026-09-18-siren-backend-dashboard.md`
   ID kendaraan default acak (`AMB-NN`/`DMK-NN`) agar dua juri tidak bentrok di server demo yang sama. Dicek: hitung
   mundur ETA di dashboard turun ~1 dtk/dtk dan hijau tepat di 40 dtk.
 
+- 2026-11-07 — Demo dipindah dari Jember ke Bali untuk AI Web Innovation Challenge (Bali DigiFest 2026): rute OSRM Jl.
+  Nakula (Kuta) → Jl. Imam Bonjol → Jl. Teuku Umar → RSUP Prof. Ngoerah (5,1 km, 237 titik), S1–S3 = simpang berlampu
+  OSM di Jl. Imam Bonjol (× Pulau Galang / Gunung Soputan / Teuku Umar Barat; 1188 / 2083 / 3076 m dari awal rute),
+  titik warga bawaan 1783 m. Model ETA dilatih ulang: MAE 24,85 vs naif 26,15 dtk; 60 dtk terakhir 9,0 vs 8,37; rem
+  60 → 20 km/j: 68 → 146–155 dtk. Screenshot landing dan hero PWA diambil ulang; gambar diberi `?v=`. Versi Jember
+  tetap di tag `v1.1-submission` dan `aiwic-v1.0-submission`. README ditambah bagian wajib panduan AIWIC dan
+  `backend/.env.example`.
+
 ## Next
 
 - Simpan `sketch.ino` + `diagram.json` terbaru ke proyek Wokwi online (link untuk demo/video).

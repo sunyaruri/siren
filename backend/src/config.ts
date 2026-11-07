@@ -36,7 +36,7 @@ export const config = {
 
 /** Signalised intersections on the demo route (OSM highway=traffic_signals). axisA = route road axis. */
 export const intersections: Intersection[] = [
-  { id: 'S1', name: 'Simpang PB Sudirman – Bedadung – Anggrek', lat: -8.166863, lng: 113.704253, axisA: 35 },
-  { id: 'S2', name: 'Simpang PB Sudirman – Mastrip – Sroedji', lat: -8.156951, lng: 113.71136, axisA: 35 },
-  { id: 'S3', name: 'Simpang Sroedji – Slamet Riyadi – dr. Soebandi', lat: -8.151537, lng: 113.717539, axisA: 54 },
+  { id: 'S1', name: 'Simpang Imam Bonjol – Pulau Galang', lat: -8.6956617, lng: 115.1870329, axisA: 35 },
+  { id: 'S2', name: 'Simpang Imam Bonjol – Gunung Soputan', lat: -8.6892329, lng: 115.1917795, axisA: 32 },
+  { id: 'S3', name: 'Simpang Imam Bonjol – Teuku Umar Barat', lat: -8.6819342, lng: 115.1969248, axisA: 35 },
 ];

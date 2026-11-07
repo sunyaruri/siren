@@ -78,11 +78,11 @@
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero__map">
           <img
-            src="img/map-hero.webp"
+            src="img/map-hero.webp?v=20261107"
             width="1920"
             height="1080"
             fetchpriority="high"
-            alt="Peta Kota Jember dengan rute demo ambulans dan zona hijau 1 km di sekitar simpang S1."
+            alt="Peta Denpasar dengan rute demo ambulans dari Kuta dan zona hijau 1 km di sekitar simpang S1 dan S2."
           />
         </div>
         <div class="wrap hero__grid">
@@ -171,7 +171,7 @@
               <dd>3 dtk</dd>
             </div>
             <div class="numbers__cell">
-              <dt>Simpang di rute demo Jember</dt>
+              <dt>Simpang di rute demo Denpasar</dt>
               <dd>3</dd>
             </div>
           </dl>
@@ -335,20 +335,20 @@
                   <tbody>
                     <tr>
                       <th scope="row">Rata-rata galat (MAE)</th>
-                      <td class="num num--win">22,1 detik</td>
-                      <td class="num">25,5 detik</td>
+                      <td class="num num--win">24,9 detik</td>
+                      <td class="num">26,2 detik</td>
                     </tr>
                     <tr>
                       <th scope="row">60 detik terakhir sebelum simpang</th>
-                      <td class="num">10,4 detik</td>
-                      <td class="num">9,8 detik</td>
+                      <td class="num">9,0 detik</td>
+                      <td class="num">8,4 detik</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
               <p class="small">
                 Data: 400 perjalanan dengan macet sampai 1 km dan berhenti
-                sampai 90 detik; 107.782 sampel latih, 24.681 sampel uji. Dekat
+                sampai 90 detik; 100.396 sampel latih, 26.384 sampel uji. Dekat
                 simpang keduanya setara; model unggul saat kecepatan
                 berubah-ubah.
               </p>
@@ -356,7 +356,7 @@
                 <p class="pill pill--wait">Catatan model</p>
                 <p>
                   Model saat ini dilatih dengan data simulasi perjalanan di rute
-                  Jember (kecepatan acak, macet, berhenti, dan noise GPS). Model
+                  demo Denpasar (kecepatan acak, macet, berhenti, dan noise GPS). Model
                   akan dilatih ulang dengan data perjalanan nyata pada uji
                   lapangan.
                 </p>
@@ -383,18 +383,18 @@
                   >
                 </div>
                 <img
-                  src="img/dashboard.webp"
+                  src="img/dashboard.webp?v=20261107"
                   width="1440"
                   height="900"
                   loading="lazy"
-                  alt="Tangkapan layar Command Center: peta Jember dengan zona 1 km di sekitar simpang S1, kartu ambulans AMB-SIM1 dengan prediksi AI tiba 38 detik, status simpang S1 hijau untuk jalur utama, S2 dan S3 siklus normal."
+                  alt="Tangkapan layar Command Center: peta Denpasar dengan zona 1 km di sekitar simpang S1, kartu ambulans AMB-SIM1 dengan prediksi AI tiba 23 detik, status simpang S1 hijau untuk jalur utama, S2 dan S3 siklus normal."
                 />
               </div>
               <div class="part__body">
                 <p class="label">Untuk petugas Command Center</p>
                 <h3>Command Center (dashboard)</h3>
                 <p>
-                  Peta Jember, status simpang S1–S3, kartu tiap kendaraan dengan
+                  Peta Denpasar, status simpang S1–S3, kartu tiap kendaraan dengan
                   prediksi tiba, dan log kejadian. Semua berubah langsung.
                 </p>
                 <a class="btn btn--secondary" href="/dashboard/"
@@ -406,11 +406,11 @@
             <article class="card part">
               <div class="device-phone">
                 <img
-                  src="img/driver.webp"
+                  src="img/driver.webp?v=20261107"
                   width="390"
                   height="844"
                   loading="lazy"
-                  alt="Tangkapan layar aplikasi petugas darurat: peta posisi ambulans, label Lampu hijau untuk Anda, dan tulisan Tiba di S1 dalam 36 detik, 393 meter lagi."
+                  alt="Tangkapan layar aplikasi petugas darurat: peta posisi ambulans, label Lampu hijau untuk Anda, dan tulisan Tiba di S1 dalam 38 detik, 527 meter lagi, lampu jalur Anda hijau."
                 />
               </div>
               <p class="label">Untuk sopir ambulans dan pemadam</p>
@@ -425,11 +425,11 @@
             <article class="card part">
               <div class="device-phone">
                 <img
-                  src="img/citizen.webp"
+                  src="img/citizen.webp?v=20261107"
                   width="390"
                   height="844"
                   loading="lazy"
-                  alt="Tangkapan layar aplikasi warga: layar merah penuh bertuliskan Ambulans mendekat dari belakang, 447 meter, Menepi dan beri jalan."
+                  alt="Tangkapan layar aplikasi warga: layar biru penuh bertuliskan Ambulans mendekat dari belakang, 976 meter, Menepi dan beri jalan, menuju simpang S1."
                 />
               </div>
               <p class="label">Untuk warga dan pengendara</p>
@@ -588,7 +588,7 @@
                   </li>
                   <li>
                     Klik <strong>Mulai Misi</strong>. Mode simulasi rute bisa
-                    dicoba dari luar Jember.
+                    dicoba dari luar Bali.
                   </li>
                   <li>
                     Tekan <strong>Pelan</strong> atau <strong>Berhenti</strong>:

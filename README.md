@@ -72,7 +72,8 @@ Detail payload dan topic: [`docs/CONTRACT.md`](docs/CONTRACT.md).
 
 ## Keterbatasan MVP
 
-- Uji coba memakai peta Jember dan pengendali lampu simulasi (Wokwi), belum terhubung ke ATCS sungguhan.
+- Uji coba memakai rute demo di Denpasar (Kuta → RSUP Prof. Ngoerah) dan pengendali lampu simulasi (Wokwi), belum
+  terhubung ke ATCS sungguhan.
 - Model AI dilatih dengan data perjalanan sintetis; dekat simpang akurasinya setara cara naif jarak ÷ kecepatan.
 - Kode Misi masih daftar statis, belum token per perjalanan dari Command Center 112.
 - Broker MQTT publik tanpa kontrol akses (produksi: broker privat dengan autentikasi).
@@ -124,7 +125,7 @@ Buka `http://localhost:3000/mobile/`, lalu pilih peran:
 - **Driver Cockpit**: isi **Kode Misi** (demo: `DEMO-112`), ID kendaraan, dan jenisnya (Ambulans/Pemadam). Tanpa kode yang valid, backend menolak GPS (401) sehingga lampu tidak berubah. Posisi berasal dari simulasi rute (60 km/j) atau GPS asli (toggle). Peta menampilkan jejak kendaraan, dan HUD menampilkan simpang berikutnya, jaraknya, serta status NORMAL/PRIORITAS.
 - **Citizen HUD**: tanpa peta. Tampil "Aman", atau layar penuh berkedip merah-biru saat ambulans/pemadam dalam 1 km dan
   sedang mendekat: panah + arah (dari belakang/depan/kiri/kanan), jarak, "Menepi & beri jalan", dan HP bergetar tiap 3 dtk
-  (Android, hanya saat app terbuka dan layar menyala). Centang *Posisi simulasi* untuk demo di luar Jember.
+  (Android, hanya saat app terbuka dan layar menyala). Aktifkan *Posisi simulasi* untuk demo di luar Denpasar.
 
 Di HP, buka lewat URL `cloudflared`, karena HTTPS wajib untuk GPS dan untuk install ke home screen. Field *Backend URL* di form Driver bisa diganti kalau backend tidak berada di origin yang sama. PWA punya service worker (network-first), jadi tampilannya tetap terbuka walau WiFi sempat putus.
 
@@ -144,7 +145,7 @@ Tanpa kunci: tombol **Mulai demo** di dashboard langsung menjalankan satu ambula
 - **Reset demo:** semua simpang NORMAL, kendaraan simulasi kembali ke titik mulainya dalam keadaan dijeda; tekan
   **Lanjutkan** untuk mengulang skenario.
 
-Peta dashboard menampilkan garis rute demo dengan penanda **▶ Mulai** (Jl. Gajah Mada) dan **H Tujuan** (RSUD dr. Soebandi).
+Peta dashboard menampilkan garis rute demo dengan penanda **▶ Mulai** (Jl. Nakula, Kuta) dan **H Tujuan** (RSUP Prof. Ngoerah).
 
 Skenario cepat: radius 600 m, kecepatan 120 km/j, warga *Setelah S1*, kendaraan *Mulai sebelum S1* → lampu S1 hijau
 begitu prediksi ETA ≤ `ETA_LEAD_S` (log dashboard: "prediksi AI: tiba … dtk"), HP warga bergetar ±7 dtk setelah **Jalankan**. Semua pengaturan hilang saat server restart.
@@ -200,10 +201,10 @@ sampai di simpang. Lampu hijau dibuka saat kendaraan di dalam radius, sedang men
 - Pelatihan: `npm run train:eta` (di `backend/`) mensimulasikan 400 perjalanan di rute demo (kecepatan acak, macet
   sampai 1 km, berhenti sampai 90 dtk, melambat di tikungan, noise GPS 4 m), melatih model, dan menulis bobotnya ke
   `src/eta-model.ts`.
-- Hasil di perjalanan uji (data yang tidak dipakai melatih): MAE 22,1 dtk vs 25,5 dtk untuk cara naif jarak ÷
-  kecepatan; dalam 60 dtk terakhir sebelum simpang keduanya setara (10,4 vs 9,8 dtk). Model regresi linear versi
-  sebelumnya di data uji yang sama: 22,2 dan 12,3 dtk, dan hampir tidak bereaksi saat kendaraan melambat (rem 60 → 20
-  km/j: ETA 89 → 106 dtk, padahal sebenarnya ~165 dtk; model baru 72 → 140–169 dtk).
+- Hasil di perjalanan uji (data yang tidak dipakai melatih): MAE 24,9 dtk vs 26,2 dtk untuk cara naif jarak ÷
+  kecepatan; dalam 60 dtk terakhir sebelum simpang keduanya setara (9,0 vs 8,4 dtk). Model regresi linear versi
+  sebelumnya hampir tidak bereaksi saat kendaraan melambat (rem 60 → 20 km/j: ETA 89 → 106 dtk, padahal sebenarnya
+  ~165 dtk); model log-linear saat ini 68 → 146–155 dtk.
 - Keterbatasan: data latih masih sintetis. Langkah berikutnya: latih ulang dari rekaman GPS perjalanan asli.
 
 ## Konfigurasi (env / `backend/.env`)

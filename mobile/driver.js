@@ -1,6 +1,6 @@
-import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261106p";
+import { bearingDeg, connectMqtt, formatEta, haversineM, setText } from "./mqtt-client.js?v=20261107a";
 // Same traffic-light state machine the dashboard uses (a copy of the ESP32 firmware logic).
-import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority } from "/dashboard/signals.js?v=20261106p";
+import { FIRST_STEP, advance, createSignal, enterNormal, enterPriority } from "/dashboard/signals.js?v=20261107a";
 
 const L = window.L;
 const DEFAULT_SIM_SPEED_KMH = 60;
