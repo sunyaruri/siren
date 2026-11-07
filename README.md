@@ -12,7 +12,100 @@ otomatis saat prediksi ETA ≤ 40 detik → normal kembali setelah lewat.
 
 Kontrak antar-bagian: [`docs/CONTRACT.md`](docs/CONTRACT.md). Log proses: [`PROGRESS.md`](PROGRESS.md).
 
+## Deployment & demo
+
+- **URL:** https://siren.polije.app (landing) · Command Center: https://siren.polije.app/dashboard/ · aplikasi HP:
+  https://siren.polije.app/mobile/
+- **Akun demo:** tidak perlu login. Di dashboard tekan **Mulai demo** (ambulans simulasi menuju simpang S1). Aplikasi
+  Petugas Darurat memakai **Kode Misi `DEMO-112`** (kode khusus demo). Aplikasi Warga: aktifkan **Posisi simulasi**.
+
+## Masalah & target user
+
+Ambulans dan pemadam tertahan antrean lampu merah, sirene baru terdengar dari dekat dan memicu pengendara panik, dan
+sopir yang menerobos simpang berisiko tabrakan silang serta pidana (Pasal 310 UU No. 22/2009). Lampu simpang berjalan
+dengan siklusnya sendiri tanpa tahu ada kendaraan darurat mendekat.
+
+| Pengguna | Kebutuhan |
+|---|---|
+| Sopir ambulans / pemadam | Jalur hijau di simpang tanpa harus menerobos lampu merah |
+| Operator Command Center 112 / Dishub | Memantau armada dan simpang, membuka jalur secara otomatis dan terpantau |
+| Warga & pengendara | Tahu lebih awal dari mana kendaraan darurat datang agar bisa menepi dengan tenang |
+
+## Fitur utama
+
+- **Prediksi ETA berbasis AI** sebagai pemicu lampu hijau: hijau saat kendaraan di dalam radius 1 km, mendekat, dan
+  prediksi tiba ≤ 40 detik.
+- **Command Center (dashboard):** peta simpang S1–S3 dengan warna lampu, kartu tiap kendaraan dengan hitung mundur
+  prediksi AI, log kejadian, tombol *Mulai demo*.
+- **Aplikasi Petugas Darurat (PWA):** Kode Misi wajib, simpang berikutnya, prediksi tiba, jarak, warna lampu jalur
+  sendiri; simulasi rute dengan tombol *Normal / Pelan / Berhenti*.
+- **Aplikasi Warga (PWA):** peringatan layar penuh merah-biru dengan arah datang dan jarak, getar; tanpa peta, tanpa
+  login.
+- **Pengendali lampu IoT:** ESP32 di simulator Wokwi menerima perintah MQTT untuk tiga simpang (18 LED).
+- **Failsafe:** perintah prioritas berlaku 15 detik (diperbarui tiap 5 detik); lampu dilepas otomatis setelah
+  kendaraan lewat atau berhenti lebih dari 3 menit.
+
+## Tech stack
+
+| Lapisan | Teknologi |
+|---|---|
+| Frontend | HTML, CSS, JavaScript tanpa framework; PWA (service worker, manifest); Leaflet + OpenStreetMap |
+| Backend | Node.js 24 (TypeScript tanpa build step), Express 5 |
+| Database | Tanpa database: state in-memory + pesan retained di broker MQTT |
+| Messaging / IoT | MQTT (mqtt.js), broker publik HiveMQ; ESP32 (Arduino, PubSubClient, ArduinoJson) di Wokwi |
+| AI | Regresi ridge log-linear buatan sendiri (`backend/src/eta.ts`), tanpa library/API AI eksternal |
+| Hosting | Server Ubuntu (Oracle Cloud) + Cloudflare Tunnel, domain `siren.polije.app` |
+
+## Arsitektur / alur data
+
+```
+Aplikasi Petugas (PWA) --POST /api/gps + Kode Misi--> Backend Express
+                                                        ├─ validasi Kode Misi
+                                                        ├─ geofence + arah (mendekat?)
+                                                        └─ model AI prediksi ETA → keputusan PRIORITAS/NORMAL
+                                                                 │ MQTT (siren-polnes26/…)
+                              ┌──────────────────────────────────┼───────────────────────────┐
+                    ESP32 pengendali lampu (Wokwi)     Command Center (dashboard)     Aplikasi Warga (PWA)
+```
+
+Detail payload dan topic: [`docs/CONTRACT.md`](docs/CONTRACT.md).
+
+## Keterbatasan MVP
+
+- Uji coba memakai peta Jember dan pengendali lampu simulasi (Wokwi), belum terhubung ke ATCS sungguhan.
+- Model AI dilatih dengan data perjalanan sintetis; dekat simpang akurasinya setara cara naif jarak ÷ kecepatan.
+- Kode Misi masih daftar statis, belum token per perjalanan dari Command Center 112.
+- Broker MQTT publik tanpa kontrol akses (produksi: broker privat dengan autentikasi).
+- Satu kendaraan per simpang (siapa datang lebih dulu); peringatan warga hanya saat aplikasi terbuka.
+
+## Third-party resources & credits
+
+Express, MQTT.js, Leaflet 1.9.4, TypeScript; PubSubClient, ArduinoJson, Wokwi; peta dan data simpang © OpenStreetMap
+contributors (ODbL), rute demo dari OSRM; broker HiveMQ publik; Google Fonts (Inter, JetBrains Mono); ikon garis
+berbasis Lucide (ISC); APK Android dibungkus sebagai TWA dengan PWABuilder. Tanpa template, dataset, atau model AI
+pihak ketiga.
+
+## AI & Technology Disclosure
+
+| Komponen | Isi |
+|---|---|
+| AI Model / Method | Regresi ridge log-linear buatan sendiri, dilatih offline (`npm run train:eta`) |
+| Peran AI | Memprediksi waktu tiba kendaraan darurat di simpang; menentukan kapan lampu hijau dibuka |
+| Dataset | Data latih sintetis (400 simulasi perjalanan di rute demo); koordinat simpang dari OpenStreetMap |
+| AI Coding Assistant | Claude (Anthropic), untuk membantu kode, pengujian, dokumentasi, dan desain antarmuka |
+| Pre-existing | Backend geofence + MQTT, dashboard, PWA, ESP32 Wokwi, Kode Misi, failsafe TTL dibuat 19 Sep – 1 Okt 2026 untuk Hackathon IT Fest 2026; prediksi ETA AI, pelepasan saat berhenti, Panel Demo tanpa kunci, landing, dan desain ulang UI dibuat mulai 6 Nov 2026 |
+
+## Tim
+
+| Nama | Peran |
+|---|---|
+| Azrieal Akbar Zackiansyah | Ketua tim |
+| Devantara Adani Nazal | Backend, model AI, Command Center |
+| Muhammad Irfan Ar-Rafi | Aplikasi PWA, ESP32 (Wokwi) |
+
 ## Menjalankan (Node ≥ 24)
+
+Salin `backend/.env.example` ke `backend/.env` bila ingin mengubah konfigurasi (semua opsional).
 
 ```powershell
 cd backend
